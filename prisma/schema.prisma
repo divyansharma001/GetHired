@@ -1,0 +1,105 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL") // Optional: for connection pooling tools like PgBouncer with Prisma Accelerate
+}
+
+// We don't define a User model here explicitly managed by Prisma for auth,
+// as Clerk handles user management. We'll link resumes to Clerk's userId.
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String   // Clerk User ID
+  title     String
+  atsScore  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  personalInfo PersonalInfo?
+  education    EducationEntry[]
+  experience   ExperienceEntry[]
+  skills       SkillEntry[]
+  projects     ProjectEntry[]
+
+  @@index([userId])
+}
+
+model PersonalInfo {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+  location  String
+  linkedin  String?
+  website   String?
+  summary   String  @db.Text // Use Text for potentially longer content
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String @unique // Each resume has one personal info
+}
+
+model EducationEntry {
+  id           String    @id @default(cuid())
+  institution  String
+  degree       String
+  field        String
+  startDate    String
+  endDate      String
+  gpa          String?
+  achievements String[]  @default([]) // Array of strings for bullet points
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+}
+
+model ExperienceEntry {
+  id                  String    @id @default(cuid())
+  company             String
+  position            String
+  startDate           String
+  endDate             String
+  description         String    @db.Text
+  enhancedDescription String?   @db.Text
+  achievements        String[]  @default([]) // Array of strings for bullet points
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+}
+
+model SkillEntry {
+  id       String @id @default(cuid())
+  name     String
+  level    String // Could be an Enum later if strict values are enforced
+  category String // Could be an Enum later
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+  @@unique([resumeId, name]) // Optional: prevent duplicate skill names per resume
+}
+
+model ProjectEntry {
+  id           String   @id @default(cuid())
+  name         String
+  description  String   @db.Text
+  technologies String[] @default([])
+  url          String?
+  github       String?
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+}

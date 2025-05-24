@@ -1,32 +1,25 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // components/resume/resume-preview.tsx
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Eye, User, Briefcase, GraduationCap, Star, Wrench } from 'lucide-react';
-import { useResumeStore } from '@/hooks/use-resume';
-import { PersonalInfo, EducationEntry, ExperienceEntry, SkillEntry, ProjectEntry } from '@/types/resume';
+// REMOVE: import { useResumeStore, ResumeStateStore } from '@/hooks/use-resume';
+// REMOVE: import { shallow } from 'zustand/shallow';
+import { useShallowResumeSelector } from '@/hooks/useShallowResumeSelector'; // USE THE CUSTOM HOOK
 
 const ResumePreview: React.FC = () => {
-  const {
+  const { // Destructure what's needed. setAtsScore will be available but not used here.
     title,
     personalInfo,
     education,
     experience,
     skills,
     projects,
-  } = useResumeStore(state => ({
-    title: state.title,
-    personalInfo: state.personalInfo,
-    education: state.education,
-    experience: state.experience,
-    skills: state.skills,
-    projects: state.projects,
-  }));
+  } = useShallowResumeSelector(); // Use the custom hook
 
-  const SectionTitle: React.FC<{ icon: React.ElementType, title: string, className?: string }> = ({ icon: Icon, title, className }) => (
+  const SectionTitle: React.FC<{ icon: React.ElementType, title: string, className?: string }> = ({ icon: Icon, title: sectionTitle, className }) => (
     <div className={`flex items-center mt-5 mb-2 border-b border-slate-700 pb-1.5 ${className}`}>
       <Icon className="w-4 h-4 mr-2 text-purple-400" />
-      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-300">{title}</h3>
+      <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-300">{sectionTitle}</h3>
     </div>
   );
 
@@ -40,11 +33,10 @@ const ResumePreview: React.FC = () => {
             <Eye className="h-6 w-6 text-blue-400" />
         </div>
         <CardDescription className="text-xs text-gray-400 pt-1">
-            A simplified view of your resume as you build it.
+            A simplified view of your resume as you build it. ({title}) {/* Example of using title */}
         </CardDescription>
       </CardHeader>
       <CardContent className="text-xs text-gray-400 max-h-[70vh] overflow-y-auto p-4 styled-scrollbar">
-        {/* Basic Resume Structure */}
         <div className="p-3 bg-slate-900/30 rounded-md">
           {/* Header */}
           <div className="text-center mb-4">

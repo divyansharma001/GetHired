@@ -1,51 +1,65 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // components/resume/ats-score-display.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Target, Zap, CheckCircle, AlertTriangle, Info } from 'lucide-react';
-import { Progress } from '@/components/ui/progress'; // Assuming you have this from earlier
-import { useResumeStore } from '@/hooks/use-resume';
-import { ATSScoreDetails } from '@/types/resume'; // Assuming you have a more detailed type
+import { Progress } from '@/components/ui/progress';
+import { ATSScoreDetails, ResumeData, PersonalInfo, EducationEntry, ExperienceEntry, SkillEntry, ProjectEntry } from '@/types/resume'; // Make sure all types are here or imported correctly
+import { useShallowResumeSelector } from '@/hooks/useShallowResumeSelector'; // Your custom hook
+import { useResumeStore } from '@/hooks/use-resume'; // Still needed for getState
 
-// This is a mock function, replace with actual API call or lib function
-const calculateMockAtsScoreDetails = (resumeData: any): ATSScoreDetails => {
+// calculateMockAtsScoreDetails function (ensure it handles potentially undefined fields gracefully)
+const calculateMockAtsScoreDetails = (data: {
+    personalInfo?: PersonalInfo; // Use specific types from ResumeData
+    education?: EducationEntry[];
+    experience?: ExperienceEntry[];
+    skills?: SkillEntry[];
+    projects?: ProjectEntry[];
+}): ATSScoreDetails => {
     let overall = 0;
     const suggestions: string[] = [];
     let keywordScore = 0;
     let clarityScore = 0;
     let impactScore = 0;
 
-    if (resumeData.personalInfo?.summary?.length > 50) overall += 15; else suggestions.push("Expand your professional summary.");
-    if (resumeData.experience?.length > 0) overall += 20; else suggestions.push("Add at least one work experience entry.");
-    resumeData.experience?.forEach((exp: any) => {
-        if (exp.description?.length > 30) overall += 5;
-        if (exp.achievements?.length > 0) {
+    // Ensure data and its properties exist before accessing length or forEach
+    if (data.personalInfo?.summary && data.personalInfo.summary.length > 50) overall += 15;
+    else if (data.personalInfo?.summary !== undefined) suggestions.push("Expand your professional summary.");
+
+    if (data.experience && data.experience.length > 0) overall += 20;
+    else if (data.experience !== undefined) suggestions.push("Add at least one work experience entry.");
+    
+    data.experience?.forEach((exp) => { // exp will be ExperienceEntry
+        if (exp.description && exp.description.length > 30) overall += 5;
+        if (exp.achievements && exp.achievements.length > 0) {
             impactScore += 10;
             overall += 5;
         }
     });
-    if (resumeData.skills?.length > 2) overall += 15; else suggestions.push("List more relevant skills.");
-    if (resumeData.education?.length > 0) overall += 10; else suggestions.push("Add your educational background.");
+
+    if (data.skills && data.skills.length > 2) overall += 15;
+    else if (data.skills !== undefined) suggestions.push("List more relevant skills.");
+
+    if (data.education && data.education.length > 0) overall += 10;
+    else if (data.education !== undefined) suggestions.push("Add your educational background.");
     
-    // Simulate keyword scoring
     const keywords = ["developed", "managed", "led", "javascript", "python", "aws"];
     let foundKeywords = 0;
-    const resumeText = JSON.stringify(resumeData).toLowerCase();
+    const resumeText = JSON.stringify(data).toLowerCase(); // Stringify the partial data
     keywords.forEach(kw => {
         if(resumeText.includes(kw)) foundKeywords++;
     });
     keywordScore = Math.min(foundKeywords * 5, 25);
     overall += keywordScore;
     
-    clarityScore = resumeData.personalInfo?.summary?.length > 10 ? 15 : 5; // Simplified
+    clarityScore = (data.personalInfo?.summary && data.personalInfo.summary.length > 10) ? 15 : 5;
     overall += Math.min(clarityScore, 15);
 
+    overall = Math.min(Math.max(overall, 0), 100);
 
-    overall = Math.min(Math.max(overall, 0), 100); // Cap score between 0-100
-
-    if (overall < 60) suggestions.push("Focus on quantifying achievements in your experience section.");
-    if (overall < 75 && keywordScore < 15) suggestions.push("Incorporate more industry-specific keywords.");
-
+    if (overall < 60 && data.experience !== undefined) suggestions.push("Focus on quantifying achievements in your experience section.");
+    if (overall < 75 && keywordScore < 15 && data.skills !== undefined) suggestions.push("Incorporate more industry-specific keywords.");
 
     return {
         overall,
@@ -54,35 +68,62 @@ const calculateMockAtsScoreDetails = (resumeData: any): ATSScoreDetails => {
             clarity: { score: clarityScore, suggestions: clarityScore < 10 ? ["Ensure your summary is clear and concise."] : [] },
             impact: { score: impactScore, suggestions: impactScore < 5 ? ["Quantify your achievements with numbers."]: [] },
             formatting: { score: 70, suggestions: [] }, // Mocked
-            length: { score: resumeData.experience?.length > 1 ? 80 : 40, suggestions: []} // Mocked
+            length: { score: (data.experience && data.experience.length > 1) ? 80 : 40, suggestions: []} // Mocked
         },
-        suggestions: suggestions.slice(0, 3) // Limit general suggestions
+        suggestions: suggestions.slice(0, 3)
     };
 };
 
 
 const AtsScoreDisplay: React.FC = () => {
-  const resumeData = useResumeStore(state => ({
-    personalInfo: state.personalInfo,
-    education: state.education,
-    experience: state.experience,
-    skills: state.skills,
-    projects: state.projects,
-  }));
-  const setStoreAtsScore = useResumeStore(state => state.setAtsScore);
+  // Hooks MUST be called inside the component body
+  const { 
+    personalInfo, 
+    education, 
+    experience, 
+    skills, 
+    projects, 
+    setAtsScore: setStoreAtsScore 
+  } = useShallowResumeSelector();
+
+  const memoizedResumeData = useMemo(() => ({
+    personalInfo, education, experience, skills, projects
+  }), [personalInfo, education, experience, skills, projects]);
 
   const [atsDetails, setAtsDetails] = useState<ATSScoreDetails>({ overall: 0, suggestions: [] });
 
   useEffect(() => {
-    // Debounce this in a real app
-    const newAtsDetails = calculateMockAtsScoreDetails(resumeData);
-    setAtsDetails(newAtsDetails);
-    setStoreAtsScore(newAtsDetails.overall); // Update the global store
-  }, [resumeData, setStoreAtsScore]);
+    const newAtsDetails = calculateMockAtsScoreDetails(memoizedResumeData);
+    
+    // Update local state (atsDetails) only if the new details are actually different
+    // Using JSON.stringify for deep comparison is simple but can be inefficient for very large objects.
+    // For this use case, it's likely acceptable.
+    if (JSON.stringify(atsDetails) !== JSON.stringify(newAtsDetails)) {
+        setAtsDetails(newAtsDetails);
+    }
+
+    // Update global store (useResumeStore) only if the overall score has changed.
+    // This reads the current global score to avoid unnecessary dispatches.
+    const currentGlobalScore = useResumeStore.getState().atsScore;
+    if (newAtsDetails.overall !== currentGlobalScore) {
+      setStoreAtsScore(newAtsDetails.overall);
+    }
+  // Dependencies:
+  // - memoizedResumeData: Triggers recalculation when the relevant resume data changes.
+  // - setStoreAtsScore: The setter function from Zustand (stable reference).
+  // - atsDetails: Re-run if local atsDetails changed by the setAtsDetails above, this helps ensure
+  //              the comparison `newAtsDetails.overall !== currentGlobalScore` is made after local state updates,
+  //              but it can be tricky. A more robust way for global store update is just to depend on memoizedResumeData and setStoreAtsScore,
+  //              and let Zustand handle if the store update is a no-op.
+  //              Let's simplify the dependency array for clarity and common practice.
+  }, [memoizedResumeData, setStoreAtsScore]); // Simplified dependency array for the main effect logic.
+                                             // The comparison with currentGlobalScore handles idempotency.
+
 
   const score = atsDetails.overall;
 
   const getScoreColor = (s: number) => {
+    // TODO: Integrate with useTheme for light/dark mode consistency
     if (s >= 80) return 'text-green-400';
     if (s >= 60) return 'text-yellow-400';
     return 'text-red-400';
@@ -112,7 +153,7 @@ const AtsScoreDisplay: React.FC = () => {
             <Target className="h-6 w-6 text-purple-400" />
         </div>
         <CardDescription className="text-xs text-gray-400 pt-1">
-            Real-time analysis of your resume&apos;s compatibility with Applicant Tracking Systems.
+            Real-time analysis of your resume&apos;s compatibility.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-2">
@@ -145,23 +186,9 @@ const AtsScoreDisplay: React.FC = () => {
                     ))}
                 </ul>
             ) : (
-                <p className="text-xs text-gray-400 italic">No major issues found. Keep up the great work!</p>
+                <p className="text-xs text-gray-400 italic">Looking good! No critical issues found.</p>
             )}
         </div>
-
-        {/* Optional: Detailed Breakdown (collapsible) */}
-        {/* 
-        <Collapsible className="mt-4">
-            <CollapsibleTrigger className="text-xs text-purple-400 hover:text-purple-300">
-                Show Detailed Breakdown
-            </CollapsibleTrigger>
-            <CollapsibleContent className="text-xs text-gray-400 mt-2 space-y-1">
-                <p>Keywords: {atsDetails.breakdown?.keywords.score || 0}%</p>
-                <p>Clarity: {atsDetails.breakdown?.clarity.score || 0}%</p>
-                 ... more details ...
-            </CollapsibleContent>
-        </Collapsible>
-        */}
       </CardContent>
     </Card>
   );

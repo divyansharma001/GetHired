@@ -1,39 +1,17 @@
 // hooks/use-resume.ts
 import { create } from 'zustand';
-import { ResumeData, PersonalInfo, EducationEntry, ExperienceEntry, SkillEntry, ProjectEntry } from '@/types/resume';
-import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs for list items
+import { 
+    ResumeData, 
+    PersonalInfo, 
+    EducationEntry, 
+    ExperienceEntry, 
+    SkillEntry, 
+    ProjectEntry 
+} from '@/types/resume';
+import { v4 as uuidv4 } from 'uuid';
 
-interface ResumeStateStore extends ResumeData {
-  setUserId: (userId: string) => void;
-  setTitle: (title: string) => void;
-  
-  updatePersonalInfo: (data: Partial<PersonalInfo>) => void;
-  
-  addEducation: () => void;
-  updateEducation: (index: number, data: Partial<EducationEntry>) => void;
-  removeEducation: (id: string) => void;
-  
-  addExperience: () => void;
-  updateExperience: (index: number, data: Partial<ExperienceEntry>) => void;
-  removeExperience: (id: string) => void;
-
-  addSkill: () => void;
-  updateSkill: (index: number, data: Partial<SkillEntry>) => void;
-  removeSkill: (id: string) => void;
-
-  addProject: () => void;
-  updateProject: (index: number, data: Partial<ProjectEntry>) => void;
-  removeProject: (id: string) => void;
-
-  setAtsScore: (score: number) => void;
-  
-  // Function to load an existing resume (e.g., for editing)
-  loadResume: (resume: ResumeData) => void;
-  // Function to reset to initial state (e.g., for creating a new resume)
-  resetResume: (userId: string) => void;
-}
-
-const initialResumeState: Omit<ResumeData, 'userId' | 'title'> = {
+// Define the initial state for a new resume, excluding dynamic parts like userId or title
+const initialResumeSubStates: Omit<ResumeData, 'userId' | 'title' | 'id' | 'atsScore'> = {
   personalInfo: {
     firstName: '',
     lastName: '',
@@ -48,77 +26,159 @@ const initialResumeState: Omit<ResumeData, 'userId' | 'title'> = {
   experience: [],
   skills: [],
   projects: [],
-  atsScore: 0,
 };
+
+// Define the full store state including methods
+export interface ResumeStateStore extends ResumeData {
+  id?: string; // Optional: The DB ID of the resume being edited/created
+  
+  // Setters for top-level resume properties
+  setId: (id: string) => void;
+  setUserId: (userId: string) => void; // Though userId is often set once on init
+  setTitle: (title: string) => void;
+  setAtsScore: (score: number) => void;
+  
+  // Methods for PersonalInfo
+  updatePersonalInfo: (data: Partial<PersonalInfo>) => void;
+  
+  // Methods for Education array
+  addEducation: () => string; // Returns new entry ID
+  updateEducation: (index: number, data: Partial<EducationEntry>) => void;
+  removeEducation: (id: string) => void; // Remove by entry's unique ID
+  
+  // Methods for Experience array
+  addExperience: () => string; // Returns new entry ID
+  updateExperience: (index: number, data: Partial<ExperienceEntry>) => void;
+  removeExperience: (id: string) => void;
+
+  // Methods for Skills array
+  addSkill: () => string; // Returns new entry ID
+  updateSkill: (index: number, data: Partial<SkillEntry>) => void;
+  removeSkill: (id: string) => void;
+
+  // Methods for Projects array
+  addProject: () => string; // Returns new entry ID
+  updateProject: (index: number, data: Partial<ProjectEntry>) => void;
+  removeProject: (id: string) => void;
+  
+  // Function to load an existing resume (e.g., for editing)
+  loadResume: (resume: ResumeData & { id: string }) => void; // Ensure loaded resume has an ID
+  // Function to reset to initial state (e.g., for creating a new resume)
+  resetResume: (userId: string) => void;
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export const useResumeStore = create<ResumeStateStore>((set, get) => ({
-  ...initialResumeState,
-  userId: '', // Will be set after auth
+  // Initial state values
+  id: undefined,
+  userId: '', 
   title: 'Untitled Resume',
+  atsScore: 0,
+  ...initialResumeSubStates,
 
+  // Implementations
+  setId: (id) => set({ id }),
   setUserId: (userId) => set({ userId }),
   setTitle: (title) => set({ title }),
+  setAtsScore: (score) => set({ atsScore: score }),
 
   updatePersonalInfo: (data) => set((state) => ({
     personalInfo: { ...state.personalInfo, ...data },
   })),
 
-    addEducation: () => {
+  addEducation: () => {
     const newId = uuidv4();
     set((state) => ({
-      education: [...state.education, { id: newId, institution: '', degree: '', field: '', startDate: '', endDate: '', achievements: [] }],
+      education: [
+        ...state.education, 
+        { id: newId, institution: '', degree: '', field: '', startDate: '', endDate: '', achievements: [] }
+      ],
     }));
-    return newId; // Return the ID
+    return newId;
   },
-  
   updateEducation: (index, data) => set((state) => {
-    const education = [...state.education];
-    education[index] = { ...education[index], ...data };
-    return { education };
+    const educationList = [...state.education];
+    if (educationList[index]) {
+      educationList[index] = { ...educationList[index], ...data };
+    }
+    return { education: educationList };
   }),
-  removeEducation: (id) => set((state) => ({
-    education: state.education.filter(edu => edu.id !== id),
+  removeEducation: (idToRemove) => set((state) => ({
+    education: state.education.filter(edu => edu.id !== idToRemove),
   })),
 
-  addExperience: () => set((state) => ({
-    experience: [...state.experience, { id: uuidv4(), company: '', position: '', startDate: '', endDate: '', description: '', achievements: [] }],
-  })),
+  addExperience: () => {
+    const newId = uuidv4();
+    set((state) => ({
+      experience: [
+        ...state.experience, 
+        { id: newId, company: '', position: '', startDate: '', endDate: '', description: '', achievements: [] }
+      ],
+    }));
+    return newId;
+  },
   updateExperience: (index, data) => set((state) => {
-    const experience = [...state.experience];
-    experience[index] = { ...experience[index], ...data };
-    return { experience };
+    const experienceList = [...state.experience];
+    if (experienceList[index]) {
+      experienceList[index] = { ...experienceList[index], ...data };
+    }
+    return { experience: experienceList };
   }),
-  removeExperience: (id) => set((state) => ({
-    experience: state.experience.filter(exp => exp.id !== id),
+  removeExperience: (idToRemove) => set((state) => ({
+    experience: state.experience.filter(exp => exp.id !== idToRemove),
   })),
 
-  addSkill: () => set((state) => ({
-    skills: [...state.skills, { id: uuidv4(), name: '', level: 'Intermediate', category: 'Technical' }],
-  })),
+  addSkill: () => {
+    const newId = uuidv4();
+    set((state) => ({
+      skills: [
+        ...state.skills, 
+        { id: newId, name: '', level: 'Intermediate', category: 'Technical' }
+      ],
+    }));
+    return newId;
+  },
   updateSkill: (index, data) => set((state) => {
-    const skills = [...state.skills];
-    skills[index] = { ...skills[index], ...data };
-    return { skills };
+    const skillsList = [...state.skills];
+    if (skillsList[index]) {
+      skillsList[index] = { ...skillsList[index], ...data };
+    }
+    return { skills: skillsList };
   }),
-  removeSkill: (id) => set((state) => ({
-    skills: state.skills.filter(skill => skill.id !== id),
+  removeSkill: (idToRemove) => set((state) => ({
+    skills: state.skills.filter(skill => skill.id !== idToRemove),
   })),
   
-  addProject: () => set((state) => ({
-    projects: [...state.projects, { id: uuidv4(), name: '', description: '', technologies: [] }],
-  })),
+  addProject: () => {
+    const newId = uuidv4();
+    set((state) => ({
+      projects: [
+        ...state.projects, 
+        { id: newId, name: '', description: '', technologies: [] }
+      ],
+    }));
+    return newId;
+  },
   updateProject: (index, data) => set((state) => {
-    const projects = [...state.projects];
-    projects[index] = { ...projects[index], ...data };
-    return { projects };
+    const projectsList = [...state.projects];
+    if (projectsList[index]) {
+      projectsList[index] = { ...projectsList[index], ...data };
+    }
+    return { projects: projectsList };
   }),
-  removeProject: (id) => set((state) => ({
-    projects: state.projects.filter(proj => proj.id !== id),
+  removeProject: (idToRemove) => set((state) => ({
+    projects: state.projects.filter(proj => proj.id !== idToRemove),
   })),
-
-  setAtsScore: (score) => set({ atsScore: score }),
   
-  loadResume: (resume) => set({ ...resume }),
-  resetResume: (userId) => set({ ...initialResumeState, userId, title: 'Untitled Resume' }),
+  loadResume: (resumeToLoad) => set({ 
+    ...resumeToLoad, // This spreads all properties from resumeToLoad
+                     // including its id, userId, title, atsScore, and all sections
+  }),
+  resetResume: (userIdForNewResume) => set({
+    id: undefined, // Explicitly reset the resume's own ID
+    userId: userIdForNewResume,
+    title: 'Untitled Resume',
+    atsScore: 0,
+    ...initialResumeSubStates, // Spread the clean sub-states
+  }),
 }));
