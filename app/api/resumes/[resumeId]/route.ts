@@ -25,9 +25,9 @@ export async function GET(
     const resume = await prisma.resume.findUnique({
       where: {
         id: resumeId,
-        userId: userId, // Ensure the user owns this resume
+        userId: userId, // Crucial: Ensure the user owns this resume
       },
-      include: { // Include all related data needed to populate the form
+      include: { // Fetch all related data needed to populate the form
         personalInfo: true,
         education: true,
         experience: true,
@@ -37,13 +37,15 @@ export async function GET(
     });
 
     if (!resume) {
+      // It's important to distinguish between "not found" and "access denied"
+      // For simplicity here, we return 404 for both if the query doesn't yield a result for this user.
       return new NextResponse('Resume not found or access denied', { status: 404 });
     }
 
     return NextResponse.json(resume);
 
   } catch (error) {
-    console.error('[RESUME_ID_GET_API]', error);
+    console.error(`[RESUME_ID_GET_API Error for ID: ${context.params.resumeId}]`, error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
