@@ -6,21 +6,60 @@ import { ResumeData } from '@/types/resume'; // Make sure this includes all sub-
 
 type UpdateResumePayload = Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
 
-export async function PUT(
-  request: Request,
-  context: { params: { resumeId: string } } // Standard way to receive context with params
+export async function GET(
+  request: Request, // Not used, but part of the signature
+  context: { params: { resumeId: string } }
 ) {
   try {
-    const { userId } = await auth(); // First async operation
+    const { userId } = await auth();
+    const resumeId = context.params.resumeId;
 
-    // Now access params AFTER the await
-    const resumeId = context.params.resumeId; // Access directly from the context object
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    if (!resumeId) {
+      return new NextResponse('Resume ID is required', { status: 400 });
+    }
+
+    const resume = await prisma.resume.findUnique({
+      where: {
+        id: resumeId,
+        userId: userId, // Ensure the user owns this resume
+      },
+      include: { // Include all related data needed to populate the form
+        personalInfo: true,
+        education: true,
+        experience: true,
+        skills: true,
+        projects: true,
+      },
+    });
+
+    if (!resume) {
+      return new NextResponse('Resume not found or access denied', { status: 404 });
+    }
+
+    return NextResponse.json(resume);
+
+  } catch (error) {
+    console.error('[RESUME_ID_GET_API]', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+export async function PUT(
+  request: Request,
+  context: { params: { resumeId: string } }
+) {
+  try {
+    const { userId } = await auth();
+    const resumeId = context.params.resumeId;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
     if (!resumeId) {
-      // This check might become redundant if TS ensures resumeId is always a string
       return new NextResponse('Resume ID is required', { status: 400 });
     }
 
@@ -50,7 +89,6 @@ export async function PUT(
       return new NextResponse('Access denied', { status: 403 });
     }
 
-    // Transaction logic (as before)
     const updatedResume = await prisma.$transaction(async (tx) => {
       await tx.resume.update({
         where: { id: resumeId },
@@ -60,8 +98,8 @@ export async function PUT(
       if (personalInfo) {
         await tx.personalInfo.upsert({
           where: { resumeId: resumeId },
-          create: { ...personalInfo, resumeId: resumeId }, // Ensure all fields of PersonalInfo are here
-          update: { ...personalInfo }, // Ensure all fields of PersonalInfo are here
+          create: { ...personalInfo, resumeId: resumeId },
+          update: { ...personalInfo }, 
         });
       }
 
@@ -124,13 +162,60 @@ export async function PUT(
     return NextResponse.json(updatedResume);
 
   } catch (error) {
-    console.error('[RESUME_PUT_API]', error);
-    // if (error instanceof prisma.PrismaClientKnownRequestError) {
+    console.error('[RESUME_ID_PUT_API]', error);
+    // if (error instanceof prisma.PrismaClientKnownRequestError) { // Corrected 'prisma.'
     //     if (error.code === 'P2025') {
     //         return new NextResponse('Resource not found during update operation.', { status: 404 });
     //     } else if (error.code === 'P2028') {
     //         return new NextResponse('Operation timed out, please try again.', { status: 504 });
     //     }
+    // }
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request, // Not used, but part of the signature
+  context: { params: { resumeId: string } }
+) {
+  try {
+    const { userId } = await auth();
+    const resumeId = context.params.resumeId;
+
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    if (!resumeId) {
+      return new NextResponse('Resume ID is required', { status: 400 });
+    }
+
+    // Verify ownership before deleting
+    const resumeToDelete = await prisma.resume.findUnique({
+      where: {
+        id: resumeId,
+        userId: userId,
+      },
+    });
+
+    if (!resumeToDelete) {
+      return new NextResponse('Resume not found or access denied', { status: 404 });
+    }
+
+    // Delete the resume. Prisma's `onDelete: Cascade` in the schema
+    // should handle deleting related PersonalInfo, EducationEntries, etc.
+    await prisma.resume.delete({
+      where: {
+        id: resumeId,
+      },
+    });
+
+    return new NextResponse(null, { status: 204 }); // 204 No Content for successful deletion
+
+  } catch (error) {
+    console.error('[RESUME_ID_DELETE_API]', error);
+    // if (error instanceof prisma.PrismaClientKnownRequestError && error.code === 'P2025') { // Record to delete not found
+    //     return new NextResponse('Resume not found.', { status: 404 });
     // }
     return new NextResponse('Internal Server Error', { status: 500 });
   }
