@@ -1,235 +1,364 @@
-"use client"
+"use client";
 import React, { useState, useEffect } from 'react';
-import { ChevronRight, Sparkles, Target, FileText, Download, Zap, ArrowRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, Sparkles } from 'lucide-react';
 
 const LandingPage = () => {
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isVisible, setIsVisible] = useState(false);
+  const [isDark, setIsDark] = useState(true);
 
   useEffect(() => {
     setIsVisible(true);
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  const features = [
-    {
-      icon: <Sparkles className="w-6 h-6" />,
-      title: "AI-Powered Enhancement",
-      description: "Transform your experience with intelligent AI that crafts compelling, ATS-friendly content"
-    },
-    {
-      icon: <Target className="w-6 h-6" />,
-      title: "Real-time ATS Scoring",
-      description: "Get instant feedback with dynamic scoring that updates as you build your resume"
-    },
-    {
-      icon: <FileText className="w-6 h-6" />,
-      title: "Professional Templates",
-      description: "Choose from modern, recruiter-approved templates designed for maximum impact"
-    },
-    {
-      icon: <Download className="w-6 h-6" />,
-      title: "Instant Export",
-      description: "Download your polished resume as PDF and generate matching cover letters"
-    }
-  ];
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+  };
 
-  const stats = [
-    { value: "95%", label: "Success Rate" },
-    { value: "50K+", label: "Resumes Created" },
-    { value: "4.9★", label: "User Rating" },
-    { value: "2min", label: "Average Time" }
-  ];
+  const themeClasses = {
+    bg: isDark ? 'bg-gray-900' : 'bg-white',
+    bgAlt: isDark ? 'bg-gray-800' : 'bg-gray-50',
+    text: isDark ? 'text-white' : 'text-gray-900',
+    textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
+    textMuted2: isDark ? 'text-gray-400' : 'text-gray-500',
+    border: isDark ? 'border-gray-700' : 'border-gray-200',
+    cardBg: isDark ? 'bg-gray-800/50' : 'bg-white',
+    accent: 'bg-gradient-to-r from-blue-600 to-purple-600',
+    accentHover: 'hover:from-blue-700 hover:to-purple-700'
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 opacity-30">
-        <div 
-          className="absolute w-96 h-96 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full blur-3xl"
-          style={{
-            left: mousePosition.x - 192,
-            top: mousePosition.y - 192,
-            transform: 'translate(-50%, -50%)',
-            transition: 'all 0.3s ease-out'
-          }}
-        />
-        <div className="absolute top-1/4 right-1/4 w-64 h-64 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-1/4 left-1/3 w-48 h-48 bg-gradient-to-r from-green-500 to-teal-500 rounded-full blur-3xl animate-bounce" />
-      </div>
-
+    <div className={`${themeClasses.bg} transition-colors duration-300`}>
       {/* Navigation */}
-      <nav className="relative z-10 flex items-center justify-between p-6 max-w-7xl mx-auto">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-            <Sparkles className="w-5 h-5" />
+      <nav className={`flex items-center justify-between px-6 py-4 max-w-7xl mx-auto ${themeClasses.bg} backdrop-blur-md bg-opacity-80 sticky top-0 z-50`}>
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Sparkles className="w-5 h-5 text-white" />
           </div>
-          <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-            ResumeAI
+          <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
+            ResumeAI Pro
           </span>
         </div>
+        
+        <div className="hidden md:flex items-center space-x-8">
+          <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Features</a>
+          <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Pricing</a>
+          <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Examples</a>
+          <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Reviews</a>
+        </div>
+        
         <div className="flex items-center space-x-4">
-          <Link href="/sign-in">
-            <Button variant="ghost" className="text-gray-300 hover:text-white">
-              Sign In
-            </Button>
-          </Link>
-          <Link href="/sign-up">
-            <Button className="hover:scale-105 transition-transform">
-              Get Started
-            </Button>
-          </Link>
+          <button 
+            onClick={toggleTheme}
+            className={`p-2 rounded-lg ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`}
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </button>
+          <button className={`${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors`}>
+            Sign in
+          </button>
+          <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}>
+            Get Started
+          </button>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 pt-20 pb-32">
-        <div className={`text-center transform transition-all duration-1000 ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-sm border border-white/20 rounded-full px-4 py-2 mb-8">
-            <Zap className="w-4 h-4 text-yellow-400" />
-            <span className="text-sm">AI-Powered Resume Builder</span>
+      <section className="max-w-7xl mx-auto px-6 pt-20 pb-32 relative">
+        {/* Background gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent rounded-3xl"></div>
+        
+        <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <div className={`inline-flex items-center ${isDark ? 'bg-blue-900/30 text-blue-300 border border-blue-700/30' : 'bg-blue-50 text-blue-700'} px-4 py-2 rounded-full text-sm font-semibold mb-8 backdrop-blur-sm`}>
+            <div className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
+            Trusted by 150,000+ professionals worldwide
           </div>
           
-          <h1 className="text-6xl md:text-7xl font-bold mb-8 leading-tight">
-            <span className="bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent">
-              Land Your Dream Job
-            </span>
-            <br />
-            <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-              With AI Magic
+          <h1 className={`text-5xl md:text-7xl font-bold ${themeClasses.text} mb-8 leading-tight`}>
+            Build resumes that
+            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block">
+              dominate ATS systems
             </span>
           </h1>
           
-          <p className="text-xl text-gray-300 mb-12 max-w-3xl mx-auto leading-relaxed">
-            Transform your career story with our intelligent resume builder. Get real-time ATS scoring, AI-enhanced content, and professional templates that make recruiters stop scrolling.
+          <p className={`text-xl md:text-2xl ${themeClasses.textMuted} mb-12 max-w-3xl mx-auto leading-relaxed`}>
+            AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster.
           </p>
           
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-16">
-            <Link href="/sign-up">
-              <Button size="lg" className="group px-8 py-4 text-lg hover:scale-105 transition-all transform shadow-2xl">
-                <span>Start Building Free</span>
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </Button>
-            </Link>
-            <Button variant="outline" size="lg" className="px-8 py-4 text-lg backdrop-blur-sm">
-              Watch Demo
-            </Button>
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-20">
+            <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-10 py-4 rounded-xl font-semibold text-lg flex items-center transition-all duration-200 shadow-2xl hover:shadow-blue-500/25 transform hover:-translate-y-1`}>
+              Create Professional Resume
+              <ArrowRight className="w-5 h-5 ml-3" />
+            </button>
+            <button className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-semibold text-lg transition-colors group`}>
+              <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm mr-3 group-hover:bg-white/20 transition-colors">
+                <Play className="w-5 h-5" />
+              </div>
+              Watch Demo (2 min)
+            </button>
           </div>
 
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-2xl mx-auto">
-            {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-1">
+          {/* Enhanced Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
+            {[
+              { value: '97%', label: 'Interview Rate', color: 'text-green-400' },
+              { value: '150K+', label: 'Resumes Created', color: 'text-blue-400' },
+              { value: '4.9/5', label: 'User Rating', color: 'text-yellow-400' },
+              { value: '90 sec', label: 'Average Build Time', color: 'text-purple-400' }
+            ].map((stat, index) => (
+              <div key={index} className={`text-center p-6 rounded-2xl ${themeClasses.cardBg} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300`}>
+                <div className={`text-3xl font-bold ${stat.color} mb-2`}>
                   {stat.value}
                 </div>
-                <div className="text-sm text-gray-400">{stat.label}</div>
+                <div className={`text-sm ${themeClasses.textMuted2} font-medium`}>
+                  {stat.label}
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-              Why Choose ResumeAI?
-            </span>
+      {/* Social Proof */}
+      <section className={`${themeClasses.bgAlt} py-20`}>
+        <div className="max-w-7xl mx-auto px-6">
+          <p className={`text-center ${themeClasses.textMuted} mb-12 font-medium`}>
+            Trusted by professionals at leading companies
+          </p>
+          <div className="flex items-center justify-center space-x-16 opacity-70">
+            {['Google', 'Microsoft', 'Apple', 'Amazon', 'Netflix', 'Meta'].map((company) => (
+              <div key={company} className={`text-2xl font-bold ${themeClasses.text} hover:opacity-100 transition-opacity`}>
+                {company}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="max-w-7xl mx-auto px-6 py-32">
+        <div className="text-center mb-20">
+          <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
+            Advanced Features for Modern Job Seekers
           </h2>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            Our AI-powered platform combines cutting-edge technology with proven recruitment insights
+          <p className={`text-xl ${themeClasses.textMuted} max-w-3xl mx-auto`}>
+            Enterprise-grade tools that give you the competitive edge in today&apos;s job market
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {features.map((feature, index) => (
-            <div 
-              key={index}
-              className="group p-6 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/20 transition-all duration-300 transform hover:-translate-y-2"
-            >
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
-                {feature.icon}
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[
+            {
+              icon: Users,
+              title: 'Advanced ATS Optimization',
+              description: 'Bypass 99% of ATS filters with our proprietary scanning technology and keyword optimization engine.',
+              color: 'blue'
+            },
+            {
+              icon: Award,
+              title: 'AI Content Generation',
+              description: 'Generate compelling bullet points and achievements using GPT-powered writing assistance.',
+              color: 'green'
+            },
+            {
+              icon: Clock,
+              title: 'Premium Templates',
+              description: 'Access 50+ executive-level templates designed by Fortune 500 hiring managers.',
+              color: 'purple'
+            },
+            {
+              icon: Shield,
+              title: 'Real-Time Analytics',
+              description: 'Live scoring system with detailed feedback on keyword density, formatting, and impact.',
+              color: 'orange'
+            },
+            {
+              icon: Check,
+              title: 'Multi-Format Export',
+              description: 'Export to PDF, Word, LinkedIn, and share via custom branded links with tracking.',
+              color: 'red'
+            },
+            {
+              icon: Star,
+              title: 'Cover Letter Suite',
+              description: 'AI-generated cover letters that perfectly complement your resume with consistent branding.',
+              color: 'yellow'
+            }
+          ].map((feature, index) => (
+            <div key={index} className={`p-8 rounded-2xl ${themeClasses.cardBg} border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl group`}>
+              <div className={`w-14 h-14 bg-${feature.color}-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                <feature.icon className={`w-7 h-7 text-${feature.color}-600`} />
               </div>
-              <h3 className="text-xl font-semibold mb-3">{feature.title}</h3>
-              <p className="text-gray-300 leading-relaxed">{feature.description}</p>
+              <h3 className={`text-xl font-bold ${themeClasses.text} mb-4`}>
+                {feature.title}
+              </h3>
+              <p className={`${themeClasses.textMuted} leading-relaxed`}>
+                {feature.description}
+              </p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Process Section */}
-      <section className="relative z-10 max-w-7xl mx-auto px-6 py-20">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-              Simple 3-Step Process
-            </span>
+      {/* How it works */}
+      <section className={`${themeClasses.bgAlt} py-32`}>
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
+              Three Steps to Success
+            </h2>
+            <p className={`text-xl ${themeClasses.textMuted}`}>
+              Professional results in under 3 minutes
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-12">
+            {[
+              {
+                step: '01',
+                title: 'Import Your Data',
+                description: 'Upload your existing resume or LinkedIn profile. Our AI extracts and optimizes your information automatically.'
+              },
+              {
+                step: '02',
+                title: 'AI Enhancement',
+                description: 'Choose from premium templates while our AI suggests improvements, keywords, and quantified achievements.'
+              },
+              {
+                step: '03',
+                title: 'Deploy & Track',
+                description: 'Download your ATS-optimized resume and track application performance with built-in analytics.'
+              }
+            ].map((item, index) => (
+              <div key={index} className="text-center group">
+                <div className="relative mb-8">
+                  <div className={`w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-3xl flex items-center justify-center text-xl font-bold mx-auto shadow-2xl group-hover:scale-110 transition-transform duration-300`}>
+                    {item.step}
+                  </div>
+                  {index < 2 && (
+                    <div className={`hidden md:block absolute top-10 left-full w-full h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
+                  )}
+                </div>
+                <h3 className={`text-2xl font-bold ${themeClasses.text} mb-4`}>
+                  {item.title}
+                </h3>
+                <p className={`${themeClasses.textMuted} text-lg leading-relaxed`}>
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section id="testimonials" className="max-w-7xl mx-auto px-6 py-32">
+        <div className="text-center mb-20">
+          <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
+            Success Stories
           </h2>
+          <p className={`text-xl ${themeClasses.textMuted}`}>
+            Real results from real professionals
+          </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-8">
           {[
-            { step: "01", title: "Fill Your Info", desc: "Add your details, experience, and skills through our intuitive form" },
-            { step: "02", title: "AI Enhancement", desc: "Watch as our AI transforms your content into compelling, ATS-friendly text" },
-            { step: "03", title: "Download & Apply", desc: "Get your polished resume and start applying with confidence" }
-          ].map((item, index) => (
-            <div key={index} className="text-center group relative">
-              <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mx-auto mb-6 text-xl font-bold group-hover:scale-110 transition-transform">
-                {item.step}
+            {
+              name: 'Sarah Chen',
+              role: 'Senior Software Engineer',
+              company: 'Google',
+              content: 'Landed 5 FAANG interviews in two weeks. The ATS optimization is incredible - my resume now ranks in the top 2% of applicants.',
+              rating: 5
+            },
+            {
+              name: 'Marcus Johnson',
+              role: 'VP of Marketing',
+              company: 'Stripe',
+              content: 'The AI writing assistant transformed my achievements into compelling stories. Increased my interview rate by 400%.',
+              rating: 5
+            },
+            {
+              name: 'Emily Rodriguez',
+              role: 'Lead Product Designer',
+              company: 'Airbnb',
+              content: 'Professional, modern, and effective. Got my dream role at a unicorn startup thanks to the premium templates.',
+              rating: 5
+            }
+          ].map((testimonial, index) => (
+            <div key={index} className={`p-8 rounded-2xl ${themeClasses.cardBg} border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl`}>
+              <div className="flex mb-6">
+                {[...Array(testimonial.rating)].map((_, i) => (
+                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+                ))}
               </div>
-              <h3 className="text-xl font-semibold mb-3">{item.title}</h3>
-              <p className="text-gray-300">{item.desc}</p>
-              {index < 2 && (
-                <div className="hidden md:block absolute top-8 -right-4 transform translate-x-full">
-                  <ChevronRight className="w-6 h-6 text-gray-600" />
+              <p className={`${themeClasses.textMuted} text-lg mb-6 leading-relaxed italic`}>
+                &quot;{testimonial.content}&quot;
+              </p>
+              <div className="flex items-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mr-4 flex items-center justify-center text-white font-bold">
+                  {testimonial.name.split(' ').map(n => n[0]).join('')}
                 </div>
-              )}
+                <div>
+                  <div className={`font-bold ${themeClasses.text}`}>
+                    {testimonial.name}
+                  </div>
+                  <div className={`text-sm ${themeClasses.textMuted2}`}>
+                    {testimonial.role} at {testimonial.company}
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative z-10 max-w-4xl mx-auto px-6 py-20 text-center">
-        <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-sm border border-white/20 rounded-3xl p-12">
-          <h2 className="text-4xl font-bold mb-6">
-            <span className="bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-              Ready to Transform Your Career?
-            </span>
+      {/* CTA */}
+      <section className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-32 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/20"></div>
+        <div className="max-w-5xl mx-auto px-6 text-center relative z-10">
+          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 leading-tight">
+            Ready to Transform Your Career?
           </h2>
-          <p className="text-xl text-gray-300 mb-8">
-            Join thousands of professionals who&apos;ve landed their dream jobs with ResumeAI
+          <p className="text-xl text-blue-100 mb-12 max-w-2xl mx-auto">
+            Join 150,000+ professionals who&apos;ve accelerated their careers with AI-powered resumes
           </p>
-          <Link href="/sign-up">
-            <Button size="lg" className="group px-10 py-4 text-lg hover:scale-105 transition-all transform shadow-2xl">
-              <span>Start Building Your Resume</span>
-              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
+            <button className="bg-white text-gray-900 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 shadow-2xl transform hover:-translate-y-1">
+              Start Building Now - Free
+            </button>
+            <button className="border-2 border-white text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-gray-900 transition-all duration-200">
+              View Live Demo
+            </button>
+          </div>
+          <p className="text-blue-200 text-sm mt-6">
+            No credit card required • 7-day free trial • Cancel anytime
+          </p>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-white/10 mt-20">
-        <div className="max-w-7xl mx-auto px-6 py-12">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5" />
+      <footer className={`${themeClasses.bgAlt} border-t ${themeClasses.border}`}>
+        <div className="max-w-7xl mx-auto px-6 py-16">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <div className="flex items-center space-x-3 mb-6 md:mb-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="text-xl font-bold">ResumeAI</span>
+              <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
+                ResumeAI Pro
+              </span>
             </div>
-            <div className="text-gray-400">
-              © 2024 ResumeAI. All rights reserved.
+            <div className="flex space-x-8">
+              {['Privacy Policy', 'Terms of Service', 'Support Center', 'API Documentation'].map((link) => (
+                <a key={link} href="#" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>
+                  {link}
+                </a>
+              ))}
             </div>
+          </div>
+          <div className={`border-t ${themeClasses.border} pt-8 text-center ${themeClasses.textMuted2}`}>
+            <p>&copy; 2024 ResumeAI Pro. All rights reserved. Built with cutting-edge AI technology.</p>
           </div>
         </div>
       </footer>
