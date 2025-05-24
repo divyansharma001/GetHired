@@ -55,3 +55,20 @@ body {
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
 }
+
+
+/* Custom Scrollbar for Preview */
+.styled-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+.styled-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+}
+.styled-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.5); /* purple-500 with opacity */
+  border-radius: 10px;
+}
+.styled-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.7);
+}
