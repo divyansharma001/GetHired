@@ -1,18 +1,22 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// components/landing/landing-page.tsx
 "use client";
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link'; // Import Link
+import { useRouter } from 'next/navigation'; // Import useRouter for programmatic navigation if needed
 import { ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, Sparkles } from 'lucide-react';
+import { useTheme } from '@/context/theme-provider'; // Assuming you created this
 
-const LandingPage = () => {
+const LandingPageContent = () => {
   const [isVisible, setIsVisible] = useState(false);
-  const [isDark, setIsDark] = useState(true);
+  const { theme, toggleTheme } = useTheme(); // Use your theme context
+  const router = useRouter(); // Initialize router
 
   useEffect(() => {
     setIsVisible(true);
   }, []);
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-  };
+  const isDark = theme === 'dark';
 
   const themeClasses = {
     bg: isDark ? 'bg-gray-900' : 'bg-white',
@@ -21,23 +25,29 @@ const LandingPage = () => {
     textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
     textMuted2: isDark ? 'text-gray-400' : 'text-gray-500',
     border: isDark ? 'border-gray-700' : 'border-gray-200',
-    cardBg: isDark ? 'bg-gray-800/50' : 'bg-white',
+    cardBg: isDark ? 'bg-gray-800/50' : 'bg-white', // Note: opacity might behave differently on light bg
     accent: 'bg-gradient-to-r from-blue-600 to-purple-600',
     accentHover: 'hover:from-blue-700 hover:to-purple-700'
+  };
+
+  // Placeholder for demo video click
+  const handleWatchDemo = () => {
+    alert("Watch Demo functionality to be implemented!");
+    // Example: router.push('/demo'); or open a modal
   };
 
   return (
     <div className={`${themeClasses.bg} transition-colors duration-300`}>
       {/* Navigation */}
       <nav className={`flex items-center justify-between px-6 py-4 max-w-7xl mx-auto ${themeClasses.bg} backdrop-blur-md bg-opacity-80 sticky top-0 z-50`}>
-        <div className="flex items-center space-x-3">
+        <Link href="/" className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
             ResumeAI Pro
           </span>
-        </div>
+        </Link>
         
         <div className="hidden md:flex items-center space-x-8">
           <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Features</a>
@@ -54,18 +64,21 @@ const LandingPage = () => {
           >
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
-          <button className={`${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors`}>
-            Sign in
-          </button>
-          <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}>
-            Get Started
-          </button>
+          <Link href="/sign-in" passHref>
+            <button className={`${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors`}>
+              Sign in
+            </button>
+          </Link>
+          <Link href="/sign-up" passHref>
+            <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}>
+              Get Started
+            </button>
+          </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-6 pt-20 pb-32 relative">
-        {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent rounded-3xl"></div>
         
         <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
@@ -86,11 +99,16 @@ const LandingPage = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-20">
-            <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-10 py-4 rounded-xl font-semibold text-lg flex items-center transition-all duration-200 shadow-2xl hover:shadow-blue-500/25 transform hover:-translate-y-1`}>
-              Create Professional Resume
-              <ArrowRight className="w-5 h-5 ml-3" />
-            </button>
-            <button className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-semibold text-lg transition-colors group`}>
+            <Link href="/sign-up" passHref> {/* Main CTA to sign-up */}
+              <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-10 py-4 rounded-xl font-semibold text-lg flex items-center transition-all duration-200 shadow-2xl hover:shadow-blue-500/25 transform hover:-translate-y-1`}>
+                Create Professional Resume
+                <ArrowRight className="w-5 h-5 ml-3" />
+              </button>
+            </Link>
+            <button 
+              onClick={handleWatchDemo}
+              className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-semibold text-lg transition-colors group`}
+            >
               <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm mr-3 group-hover:bg-white/20 transition-colors">
                 <Play className="w-5 h-5" />
               </div>
@@ -98,7 +116,7 @@ const LandingPage = () => {
             </button>
           </div>
 
-          {/* Enhanced Stats */}
+          {/* Enhanced Stats (no changes needed here for button functionality) */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
             {[
               { value: '97%', label: 'Interview Rate', color: 'text-green-400' },
@@ -119,13 +137,13 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Social Proof */}
+      {/* Social Proof (no changes needed here for button functionality) */}
       <section className={`${themeClasses.bgAlt} py-20`}>
         <div className="max-w-7xl mx-auto px-6">
           <p className={`text-center ${themeClasses.textMuted} mb-12 font-medium`}>
             Trusted by professionals at leading companies
           </p>
-          <div className="flex items-center justify-center space-x-16 opacity-70">
+          <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-4 opacity-70"> {/* Added flex-wrap and gap-y for responsiveness */}
             {['Google', 'Microsoft', 'Apple', 'Amazon', 'Netflix', 'Meta'].map((company) => (
               <div key={company} className={`text-2xl font-bold ${themeClasses.text} hover:opacity-100 transition-opacity`}>
                 {company}
@@ -135,7 +153,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Features */}
+      {/* Features (no changes needed here for button functionality) */}
       <section id="features" className="max-w-7xl mx-auto px-6 py-32">
         <div className="text-center mb-20">
           <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
@@ -152,7 +170,7 @@ const LandingPage = () => {
               icon: Users,
               title: 'Advanced ATS Optimization',
               description: 'Bypass 99% of ATS filters with our proprietary scanning technology and keyword optimization engine.',
-              color: 'blue'
+              color: 'blue' // Keep these as strings for Tailwind JIT
             },
             {
               icon: Award,
@@ -187,6 +205,11 @@ const LandingPage = () => {
           ].map((feature, index) => (
             <div key={index} className={`p-8 rounded-2xl ${themeClasses.cardBg} border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl group`}>
               <div className={`w-14 h-14 bg-${feature.color}-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
+                {/* Feature icon color needs to be handled carefully with dynamic class names. 
+                    Consider mapping 'color' to specific Tailwind classes or using inline styles if JIT issues arise.
+                    For simplicity with Tailwind JIT, ensure full class names are present or use a mapping.
+                    Example: text-blue-600, text-green-600 etc.
+                */}
                 <feature.icon className={`w-7 h-7 text-${feature.color}-600`} />
               </div>
               <h3 className={`text-xl font-bold ${themeClasses.text} mb-4`}>
@@ -200,7 +223,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* How it works */}
+      {/* How it works (no changes needed here for button functionality) */}
       <section className={`${themeClasses.bgAlt} py-32`}>
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-20">
@@ -251,7 +274,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials (no changes needed here for button functionality) */}
       <section id="testimonials" className="max-w-7xl mx-auto px-6 py-32">
         <div className="text-center mb-20">
           <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
@@ -324,10 +347,15 @@ const LandingPage = () => {
             Join 150,000+ professionals who&apos;ve accelerated their careers with AI-powered resumes
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <button className="bg-white text-gray-900 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 shadow-2xl transform hover:-translate-y-1">
-              Start Building Now - Free
-            </button>
-            <button className="border-2 border-white text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-gray-900 transition-all duration-200">
+            <Link href="/sign-up" passHref> {/* CTA to sign-up */}
+              <button className="bg-white text-gray-900 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 shadow-2xl transform hover:-translate-y-1">
+                Start Building Now - Free
+              </button>
+            </Link>
+            <button 
+              onClick={handleWatchDemo}
+              className="border-2 border-white text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-gray-900 transition-all duration-200"
+            >
               View Live Demo
             </button>
           </div>
@@ -341,15 +369,15 @@ const LandingPage = () => {
       <footer className={`${themeClasses.bgAlt} border-t ${themeClasses.border}`}>
         <div className="max-w-7xl mx-auto px-6 py-16">
           <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <div className="flex items-center space-x-3 mb-6 md:mb-0">
+            <Link href="/" className="flex items-center space-x-3 mb-6 md:mb-0">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
                 ResumeAI Pro
               </span>
-            </div>
-            <div className="flex space-x-8">
+            </Link>
+            <div className="flex flex-wrap justify-center space-x-8"> {/* Added flex-wrap and justify-center */}
               {['Privacy Policy', 'Terms of Service', 'Support Center', 'API Documentation'].map((link) => (
                 <a key={link} href="#" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>
                   {link}
@@ -358,7 +386,7 @@ const LandingPage = () => {
             </div>
           </div>
           <div className={`border-t ${themeClasses.border} pt-8 text-center ${themeClasses.textMuted2}`}>
-            <p>&copy; 2024 ResumeAI Pro. All rights reserved. Built with cutting-edge AI technology.</p>
+            <p>© 2024 ResumeAI Pro. All rights reserved. Built with cutting-edge AI technology.</p>
           </div>
         </div>
       </footer>
@@ -366,4 +394,4 @@ const LandingPage = () => {
   );
 };
 
-export default LandingPage;
+export default LandingPageContent;

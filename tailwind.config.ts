@@ -1,7 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
-  darkMode: ["class"],
+  darkMode: ["class"], // This is crucial for the theme toggle
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
@@ -24,12 +24,13 @@ const config: Config = {
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
         primary: {
-          DEFAULT: "hsl(var(--primary))",
-          foreground: "hsl(var(--primary-foreground))",
+          // DEFAULT: "hsl(var(--primary))", // We'll use gradient for buttons
+          DEFAULT: "transparent", // Placeholder, primary buttons will be gradients
+          foreground: "hsl(var(--primary-text))", 
         },
         secondary: {
-          DEFAULT: "hsl(var(--secondary))",
-          foreground: "hsl(var(--secondary-foreground))",
+          DEFAULT: "hsl(var(--muted))", // Using muted for secondary bg
+          foreground: "hsl(var(--muted-foreground))",
         },
         destructive: {
           DEFAULT: "hsl(var(--destructive))",
@@ -51,11 +52,23 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        // Direct colors from your new landing page for gradients/specifics
+        'theme-blue-600': '#2563EB',
+        'theme-purple-600': '#7C3AED',
+        'theme-blue-400': '#60A5FA',
+        'theme-purple-400': '#A78BFA',
+        'theme-pink-400': '#F472B6', // From landing page text gradient
       },
       borderRadius: {
-        lg: "var(--radius)",
-        md: "calc(var(--radius) - 2px)",
-        sm: "calc(var(--radius) - 4px)",
+        lg: "var(--radius)", // 0.75rem
+        md: "calc(var(--radius) - 2px)", // 0.625rem
+        sm: "calc(var(--radius) - 4px)", // 0.5rem
+        xl: "calc(var(--radius) + 4px)", // 1rem (as seen in landing page buttons)
+        '2xl': "calc(var(--radius) + 8px)", // 1.25rem
+        '3xl': "calc(var(--radius) + 16px)", // 1.75rem (as seen in landing page sections)
+      },
+      backgroundImage: {
+        'primary-gradient': 'linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)))',
       },
       keyframes: {
         "accordion-down": {
@@ -66,19 +79,10 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
-        "glow": {
-          "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.5" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
-        "glow": "glow 2s ease-in-out infinite",
-      },
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
       },
     },
   },

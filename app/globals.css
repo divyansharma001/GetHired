@@ -2,73 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 262.1 83.3% 57.8%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 262.1 83.3% 57.8%;
-  --radius: 0.75rem;
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* Light theme background (white) */
+    --foreground: 224 71.4% 4.1%; /* Light theme text (near black) */
+
+    --muted: 220 14.3% 95.9%; /* Light theme muted bg (light gray) */
+    --muted-foreground: 220 8.9% 46.1%; /* Light theme muted text */
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 224 71.4% 4.1%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 224 71.4% 4.1%;
+
+    --border: 220 13% 91%; /* Light theme border (gray-200) */
+    --input: 220 13% 91%; /* Light theme input border */
+
+    --primary-gradient-start: 217 91% 60%; /* blue-600 */
+    --primary-gradient-end: 262 83% 58%; /* purple-600 */
+    
+    --primary-text: 0 0% 100%; /* Text on primary gradient buttons */
+
+    --accent: 220 14.3% 95.9%; /* Light theme accent (e.g., hover) */
+    --accent-foreground: 224 71.4% 4.1%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --ring: 224 71.4% 4.1%;
+    --radius: 0.75rem; /* Keep your existing radius */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%; /* Dark theme background (gray-900) */
+    --foreground: 210 20% 98%; /* Dark theme text (near white) */
+
+    --muted: 215 27.9% 16.9%; /* Dark theme muted bg (gray-800) */
+    --muted-foreground: 217.9 10.6% 64.9%; /* Dark theme muted text (gray-300/400) */
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 20% 98%;
+
+    --card: 215 27.9% 16.9%; /* Dark theme card bg (gray-800/50) - adjust if using transparency */
+    /* For bg-gray-800/50, you might need to apply opacity directly or use a solid color */
+    /* Using a solid near equivalent for now */
+    /* --card: 222.2 47.4% 11.2%; /* slate-800 */
+
+
+    --card-foreground: 210 20% 98%;
+
+    --border: 215 20.2% 25.1%; /* Dark theme border (gray-700) */
+    --input: 215 20.2% 25.1%; /* Dark theme input border */
+    
+    /* Primary gradient is often the same, text on it might differ if needed */
+    /* --primary-gradient-start: 217 91% 60%; */
+    /* --primary-gradient-end: 262 83% 58%; */
+    /* --primary-text: 0 0% 100%; */
+
+    --accent: 215 27.9% 16.9%; /* Dark theme accent */
+    --accent-foreground: 210 20% 98%;
+
+    /* Destructive etc. can be kept or adjusted */
+  }
 }
 
-body {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  min-height: 100vh;
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    min-height: 100vh;
+  }
 }
 
-.animate-glow {
-  animation: glow 2s ease-in-out infinite;
-}
-
-@keyframes glow {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-.gradient-border {
-  position: relative;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(236, 72, 153, 0.1));
-  border: 1px solid transparent;
-}
-
-.gradient-border::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(139, 92, 246, 0.5), rgba(236, 72, 153, 0.5));
-  border-radius: inherit;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-}
-
-
-/* Custom Scrollbar for Preview */
+/* Custom Scrollbar (as before, check if it needs theme adjustments) */
 .styled-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
 .styled-scrollbar::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  /* Consider theming this too */
+  background: hsl(var(--muted) / 0.5); 
   border-radius: 10px;
 }
 .styled-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.5); /* purple-500 with opacity */
+  /* Use primary gradient colors */
+  background: linear-gradient(to bottom, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
   border-radius: 10px;
 }
 .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.7);
+  background: linear-gradient(to bottom, hsl(var(--primary-gradient-start) / 0.8), hsl(var(--primary-gradient-end) / 0.8));
+}
+
+/* Remove old gradient-border and animate-glow if not used by new landing page */
+.animate-glow {
+  /* animation: glow 2s ease-in-out infinite; */ /* If you still need it */
+}
+
+@keyframes glow {
+  /* 0%, 100% { opacity: 1; } */
+  /* 50% { opacity: 0.5; } */
 }
