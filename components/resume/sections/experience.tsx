@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // components/resume/sections/experience.tsx
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -33,6 +33,8 @@ type ExperienceFormData = z.infer<typeof experienceSchema>;
 
 const ExperienceSection: React.FC = () => {
   const { experience, updateExperience: updateStoreExperience, addExperience: addStoreExperience, removeExperience: removeStoreExperience } = useResumeStore();
+   const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
+  const resumeTitle = useResumeStore(state => state.title);
 
   const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ExperienceFormData>({
     resolver: zodResolver(experienceSchema),
@@ -71,21 +73,59 @@ const ExperienceSection: React.FC = () => {
     });
   };
   
+
+  
+
   const handleRemoveExperience = (index: number) => {
     const expIdToRemove = fields[index].id;
     removeStoreExperience(expIdToRemove);
     remove(index);
   };
 
-  const handleAiEnhance = async (index: number) => {
-    const currentDescription = watch(`experience.${index}.description`);
-    // TODO: API call to /api/ai/enhance-experience
-    // For now, simulate an AI enhancement
-    alert(`AI Enhancement for description at index ${index} to be implemented. Current: ${currentDescription}`);
-    const enhanced = `${currentDescription} (✨ AI Enhanced!)`; 
-    setValue(`experience.${index}.description`, enhanced); // Update RHF form
-    // Store update will happen via the watch effect
+ const handleAiEnhance = async (index: number) => {
+    setEnhancingIndex(index);
+    const currentEntry = watch(`experience.${index}`); // Get full current entry from RHF
+
+    if (!currentEntry || !currentEntry.description) {
+        alert("Please provide a description for the experience entry first.");
+        setEnhancingIndex(null);
+        return;
+    }
+
+    try {
+      const response = await fetch('/api/ai/enhance-experience', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: currentEntry.description,
+          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''), // Send as array
+          title: resumeTitle,
+          // jobTitle: "Target Software Engineer" // Optionally get this from user input later
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `AI enhancement failed: ${response.statusText}`);
+      }
+
+      const enhancedData = await response.json();
+
+      setValue(`experience.${index}.description`, enhancedData.enhancedDescription, { shouldDirty: true, shouldValidate: true });
+      // For achievements, you might want a more sophisticated UI to merge/select them.
+      // For now, let's append them or offer to replace.
+      // Option 1: Replace achievements textarea content
+      setValue(`experience.${index}.achievements`, enhancedData.suggestedAchievements.join('\n'), { shouldDirty: true, shouldValidate: true });
+      alert("Experience enhanced! Review the changes and the suggested achievements.");
+
+    } catch (error) {
+      console.error("AI Enhancement error:", error);
+      alert(`AI Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setEnhancingIndex(null);
+    }
   };
+
 
 
   return (

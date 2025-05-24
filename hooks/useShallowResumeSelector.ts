@@ -3,28 +3,40 @@ import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-s
 import { shallow } from 'zustand/shallow';
 import { useResumeStore, ResumeStateStore } from './use-resume';
 
-// Define the shape of the data you want to select
-interface SelectedResumeParts {
-  title: ResumeStateStore['title']; // Added title
+// Define the shape of the data selected by this general-purpose hook
+export interface ShallowSelectedResumeParts {
+  id?: ResumeStateStore['id']; // Resume's own DB ID
+  userId: ResumeStateStore['userId']; // Clerk User ID associated with the resume in store
+  title: ResumeStateStore['title'];
   personalInfo: ResumeStateStore['personalInfo'];
   education: ResumeStateStore['education'];
   experience: ResumeStateStore['experience'];
   skills: ResumeStateStore['skills'];
   projects: ResumeStateStore['projects'];
-  setAtsScore: ResumeStateStore['setAtsScore']; // Kept from previous version, ResumePreview doesn't need it
-                                                // but AtsScoreDisplay does.
+  atsScore: ResumeStateStore['atsScore']; // For AtsScoreDisplay
+  
+  // Actions that might be needed by various components
+  loadResume: ResumeStateStore['loadResume'];
+  resetResume: ResumeStateStore['resetResume'];
+  setTitle: ResumeStateStore['setTitle'];
+  setAtsScore: ResumeStateStore['setAtsScore']; // For AtsScoreDisplay
 }
 
-// A more generic selector hook for common resume parts needed by UI components
-export function useShallowResumeSelector(): SelectedResumeParts {
-  const selector = (state: ResumeStateStore): SelectedResumeParts => ({
+export function useShallowResumeSelector(): ShallowSelectedResumeParts {
+  const selector = (state: ResumeStateStore): ShallowSelectedResumeParts => ({
+    id: state.id,
+    userId: state.userId,
     title: state.title,
     personalInfo: state.personalInfo,
     education: state.education,
     experience: state.experience,
     skills: state.skills,
     projects: state.projects,
-    setAtsScore: state.setAtsScore, // AtsScoreDisplay needs this. ResumePreview will just ignore it.
+    atsScore: state.atsScore,
+    loadResume: state.loadResume,
+    resetResume: state.resetResume,
+    setTitle: state.setTitle,
+    setAtsScore: state.setAtsScore,
   });
 
   const storeApi = useResumeStore; 
@@ -32,7 +44,7 @@ export function useShallowResumeSelector(): SelectedResumeParts {
   return useSyncExternalStoreWithSelector(
     storeApi.subscribe,
     storeApi.getState,
-    storeApi.getState, 
+    storeApi.getState, // Fallback for getServerState
     selector,
     shallow
   );

@@ -54,9 +54,11 @@ export async function PUT(
   request: Request,
   context: { params: { resumeId: string } }
 ) {
+
+    console.log('[DEBUG] PUT context:', JSON.stringify(context, null, 2));
   try {
     const { userId } = await auth();
-    const resumeId = context.params.resumeId;
+    const resumeId = await context.params.resumeId;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });

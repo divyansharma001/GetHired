@@ -79,11 +79,13 @@ export interface ResumeState extends ResumeData {
 export interface ATSScoreDetails {
   overall: number;
   breakdown?: {
-    keywords: { score: number; suggestions: string[] };
-    clarity: { score: number; suggestions: string[] };
-    impact: { score: number; suggestions: string[] };
-    formatting: { score: number; suggestions: string[] };
-    length: { score: number; suggestions: string[] };
+    keywords: { score: number; suggestions: string[]; };
+    clarityAndConciseness: { score: number; suggestions: string[]; };
+    actionVerbs: { score: number; suggestions: string[]; };
+    quantifiableResults: { score: number; suggestions: string[]; };
+    // formattingAndStructure: { score: number; suggestions: string[]; }; // OLD
+    formattingAndConciseness: { score: number; suggestions: string[]; }; // NEW - Align with AI output
+    lengthAndRelevance: { score: number; suggestions: string[]; };
   };
   suggestions: string[];
 }
