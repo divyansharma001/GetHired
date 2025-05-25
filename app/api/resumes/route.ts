@@ -78,7 +78,8 @@ export async function GET() { // request parameter is optional if not used
       }
     });
 
-    const resumesWithStatus = resumes.map(r => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resumesWithStatus = resumes.map((r: any) => ({
         ...r,
         status: r.atsScore > 70 ? 'completed' : 'draft' as 'completed' | 'draft' 
     }));

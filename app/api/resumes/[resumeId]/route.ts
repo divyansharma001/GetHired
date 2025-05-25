@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/resumes/[resumeId]/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
@@ -8,11 +9,11 @@ type UpdateResumePayload = Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'upd
 
 export async function GET(
   request: Request, // Not used, but part of the signature
-  context: { params: { resumeId: string } }
+  context: { params: Promise<{ resumeId: string }> }
 ) {
   try {
     const { userId } = await auth();
-    const resumeId = context.params.resumeId;
+    const { resumeId } = await context.params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -45,20 +46,19 @@ export async function GET(
     return NextResponse.json(resume);
 
   } catch (error) {
-    console.error(`[RESUME_ID_GET_API Error for ID: ${context.params.resumeId}]`, error);
+    console.error(`[RESUME_ID_GET_API Error for ID: ${(await context.params).resumeId}]`, error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
 export async function PUT(
   request: Request,
-  context: { params: { resumeId: string } }
+  context: { params: Promise<{ resumeId: string }> }
 ) {
-
-    console.log('[DEBUG] PUT context:', JSON.stringify(context, null, 2));
+  console.log('[DEBUG] PUT context:', JSON.stringify(context, null, 2));
   try {
     const { userId } = await auth();
-    const resumeId = await context.params.resumeId;
+    const { resumeId } = await context.params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -93,7 +93,7 @@ export async function PUT(
       return new NextResponse('Access denied', { status: 403 });
     }
 
-    const updatedResume = await prisma.$transaction(async (tx) => {
+    const updatedResume = await prisma.$transaction(async (tx : any) => {
       await tx.resume.update({
         where: { id: resumeId },
         data: { title, atsScore },
@@ -180,11 +180,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request, // Not used, but part of the signature
-  context: { params: { resumeId: string } }
+  context: { params: Promise<{ resumeId: string }> }
 ) {
   try {
     const { userId } = await auth();
-    const resumeId = context.params.resumeId;
+    const { resumeId } = await context.params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
