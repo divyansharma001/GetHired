@@ -284,24 +284,121 @@ const LandingPageContent = () => {
         <div className="flex items-center space-x-3"> <button onClick={toggleTheme} className={`p-2 rounded-md ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`} aria-label="Toggle theme"> {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} </button> <Link href="/sign-in" className={`${themeClasses.textMuted} hover:${themeClasses.text} text-sm font-medium transition-colors`}> Sign in </Link> <Link href="/sign-up" className={`${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5`}> Get Started </Link> </div>
       </nav>
       
+      {/* ======== NEW HERO SECTION START ======== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24 relative overflow-hidden">
+        {/* Enhanced Background Elements */}
+        <div className="absolute inset-0 overflow-hidden -z-20">
+          {/* Gradient Orbs */}
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl animate-pulse animation-delay-1000"></div>
+          
+          {/* Additional Floating Elements */}
+          <div className="absolute top-20 right-1/4 w-32 h-32 bg-purple-500/3 rounded-full blur-2xl animate-float"></div>
+          <div className="absolute bottom-32 left-1/3 w-24 h-24 bg-cyan-500/4 rounded-full blur-2xl animate-float-delayed"></div>
+          
+          {/* Shiny Particles */}
+          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-pulse opacity-60"></div>
+          <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse opacity-40" style={{animationDelay: '1s'}}></div>
+          <div className="absolute bottom-1/4 left-1/5 w-1 h-1 bg-cyan-400 rounded-full animate-pulse opacity-50" style={{animationDelay: '2s'}}></div>
+          <div className="absolute top-1/2 right-1/5 w-1.5 h-1.5 bg-pink-400 rounded-full animate-pulse opacity-30" style={{animationDelay: '0.5s'}}></div>
+          
+          {/* Geometric Shapes */}
+          <div className="absolute top-16 left-1/6 w-4 h-4 border border-blue-300/20 rotate-45 animate-spin-slow"></div>
+          <div className="absolute bottom-20 right-1/6 w-6 h-6 border border-purple-300/15 rotate-12 animate-pulse"></div>
+        </div>
+
+        {/* Grid Pattern Overlay */}
         {isDark && (
-            <div className="absolute inset-0 -z-10 opacity-20 [mask-image:radial-gradient(ellipse_at_center,white_20%,transparent_70%)]">
-                <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
-                    <defs><pattern id="hero-texture-dark" width="8" height="8" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.5" fill="rgba(255,255,255,0.3)"></circle></pattern></defs>
-                    <rect width="100%" height="100%" fill="url(#hero-texture-dark)"></rect>
-                </svg>
-            </div>
+          <div className="absolute inset-0 -z-10 opacity-[0.03]">
+            <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
+              <defs>
+                <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M0 40V0h40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#hero-grid)"/>
+            </svg>
+          </div>
         )}
-        <div className="absolute inset-0 overflow-hidden -z-20"> <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div> <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl animate-pulse animation-delay-1000"></div> </div>
+
+        {/* Radial Gradient Spotlight */}
+        <div className="absolute inset-0 -z-15">
+          <div className={`absolute inset-0 ${isDark 
+            ? '[background:radial-gradient(circle_at_center,rgba(99,102,241,0.05)_0%,transparent_50%)]' 
+            : '[background:radial-gradient(circle_at_center,rgba(59,130,246,0.03)_0%,transparent_60%)]'
+          }`}></div>
+        </div>
+
+        {/* Animated Lines */}
+        <div className="absolute inset-0 -z-10 opacity-20">
+          <div className={`absolute top-1/4 left-0 w-full h-px ${isDark ? 'bg-gradient-to-r from-transparent via-blue-400/20 to-transparent' : 'bg-gradient-to-r from-transparent via-blue-500/15 to-transparent'} animate-pulse`}></div>
+          <div className={`absolute bottom-1/3 left-0 w-full h-px ${isDark ? 'bg-gradient-to-r from-transparent via-purple-400/15 to-transparent' : 'bg-gradient-to-r from-transparent via-purple-500/10 to-transparent'} animate-pulse`} style={{animationDelay: '1.5s'}}></div>
+        </div>
+
         <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className={`inline-flex items-center ${isDark ? 'bg-emerald-800/30 text-emerald-300 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}> <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div> Trusted by 150,000+ professionals worldwide </div>
-          <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}> <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold ${themeClasses.text} mb-6 leading-tight tracking-tight`}> Build resumes that <span className="block bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent animate-gradient-x"> dominate ATS systems </span> </h1> </div>
-          <div className="animate-fade-in-up" style={{animationDelay: '0.6s'}}> <p className={`text-lg sm:text-xl ${themeClasses.textMuted} mb-10 max-w-2xl mx-auto leading-relaxed`}> AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster. </p> </div>
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-16 animate-fade-in-up" style={{animationDelay: '0.8s'}}> <Link href="/sign-up" className={`${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-8 py-3.5 rounded-lg font-semibold flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group`}> Create Professional Resume <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" /> </Link> <button onClick={handleWatchDemo} className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors group`} > <div className={`p-2.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-slate-100'} backdrop-blur-sm mr-3 group-hover:bg-blue-500/10 transition-colors`}> <Play className="w-4 h-4" /> </div> Watch Demo (2 min) </button> </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '1s'}}> {[{ value: '97%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-400' }, { value: '150K+', label: 'Resumes Created', icon: Users, color: 'text-blue-400' }, { value: '4.9/5', label: 'User Rating', icon: Star, color: 'text-yellow-400' }, { value: '90s', label: 'Build Time', icon: Zap, color: 'text-purple-400' }].map((stat, index) => ( <div key={index} className={`text-center p-4 sm:p-6 rounded-xl ${isDark ? 'bg-neutral-800/50' : 'bg-white/70'} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1 group`}> <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2 group-hover:scale-110 transition-transform`} /> <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1`}> {stat.value} </div> <div className={`text-xs sm:text-sm ${themeClasses.textMuted2} font-medium`}> {stat.label} </div> </div> ))} </div>
+          <div className={`inline-flex items-center ${isDark ? 'bg-emerald-800/30 text-emerald-300 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}> 
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div> 
+            Trusted by 150,000+ professionals worldwide 
+          </div>
+          
+          <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}> 
+            <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold ${themeClasses.text} mb-6 leading-tight tracking-tight`}> 
+              <span className="font-sans">Build resumes that</span>{' '}
+              <span className="block  bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent animate-gradient-x "> 
+                <span className=' italic'>dominate</span> ATS systems 
+              </span>   
+            </h1> 
+          </div>
+          
+          <div className="animate-fade-in-up" style={{animationDelay: '0.6s'}}> 
+            <p className={`text-lg sm:text-xl ${themeClasses.textMuted} mb-10 max-w-2xl mx-auto leading-relaxed`}> 
+              AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster. 
+            </p> 
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-16 animate-fade-in-up" style={{animationDelay: '0.8s'}}> 
+            <Link href="/sign-up" className={`relative overflow-hidden ${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-8 py-3.5 rounded-lg font-semibold flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group`}> 
+              {/* Button Shine Effect */}
+              <div className="absolute inset-0 -top-2 -bottom-2 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></div>
+              <span className="relative z-10">Create Professional Resume</span>
+              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" /> 
+            </Link> 
+            
+            <button onClick={handleWatchDemo} className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors group`} > 
+              <div className={`relative p-2.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-slate-100'} backdrop-blur-sm mr-3 group-hover:bg-blue-500/10 transition-colors overflow-hidden`}> 
+                {/* Play Button Glow */}
+                <div className="absolute inset-0 rounded-full bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors duration-300"></div>
+                <Play className="w-4 h-4 relative z-10" /> 
+              </div> 
+              Watch Demo (2 min) 
+            </button> 
+          </div>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '1s'}}> 
+            {[
+              { value: '97%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-400' }, 
+              { value: '150K+', label: 'Resumes Created', icon: Users, color: 'text-blue-400' }, 
+              { value: '4.9/5', label: 'User Rating', icon: Star, color: 'text-yellow-400' }, 
+              { value: '90s', label: 'Build Time', icon: Zap, color: 'text-purple-400' }
+            ].map((stat, index) => ( 
+              <div key={index} className={`relative text-center p-4 sm:p-6 rounded-xl ${isDark ? 'bg-neutral-800/50' : 'bg-white/70'} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1 group overflow-hidden`}> 
+                {/* Card Shine Effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+                
+                <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2 group-hover:scale-110 transition-transform relative z-10`} /> 
+                <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1 relative z-10`}> 
+                  {stat.value} 
+                </div> 
+                <div className={`text-xs sm:text-sm ${themeClasses.textMuted2} font-medium relative z-10`}> 
+                  {stat.label} 
+                </div> 
+              </div> 
+            ))} 
+          </div>
         </div>
       </section>
+      {/* ======== NEW HERO SECTION END ======== */}
+
       <SlidingCompanies />
 
       <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-28">
@@ -433,7 +530,7 @@ const LandingPageContent = () => {
                         
                         <div className={cn(
                             "absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-all duration-500",
-                            "border-gradient-to-r animate-spin-slow",
+                            "border-gradient-to-r animate-spin-slow", // This will now use the 8s duration from new hero
                             index === 0 && "border-emerald-500/30",
                             index === 1 && "border-blue-500/30", 
                             index === 2 && "border-purple-500/30"
@@ -590,22 +687,52 @@ const LandingPageContent = () => {
       </footer>
 
 <style jsx>{`
-  @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 33% { transform: translateY(-10px) rotate(1deg); } 66% { transform: translateY(5px) rotate(-1deg); } }
-  @keyframes float-delayed { 0%, 100% { transform: translateY(0px) rotate(0deg); } 33% { transform: translateY(8px) rotate(-1deg); } 66% { transform: translateY(-12px) rotate(1deg); } }
+  /* Styles from new hero section */
+  @keyframes float { 
+    0%, 100% { transform: translateY(0px) rotate(0deg); } 
+    33% { transform: translateY(-8px) rotate(1deg); } 
+    66% { transform: translateY(4px) rotate(-1deg); } 
+  }
+  @keyframes float-delayed { 
+    0%, 100% { transform: translateY(0px) rotate(0deg); } 
+    33% { transform: translateY(6px) rotate(-1deg); } 
+    66% { transform: translateY(-10px) rotate(1deg); } 
+  }
+  @keyframes spin-slow { 
+    from { transform: rotate(0deg); } 
+    to { transform: rotate(360deg); } 
+  }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  .animate-float-delayed { animation: float-delayed 8s ease-in-out infinite; animation-delay: 1s; }
+  .animate-spin-slow { animation: spin-slow 8s linear infinite; } /* Updated duration from new hero */
+  
+  @keyframes gradient-x { 
+    0%, 100% { background-position: 0% 50%; } 
+    50% { background-position: 100% 50%; } 
+  }
+  .animate-gradient-x { 
+    background-size: 200% 200%; 
+    animation: gradient-x 3s ease infinite; 
+  }
+  @keyframes fade-in-up { 
+    from { opacity: 0; transform: translateY(20px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+  .animate-fade-in-up { 
+    animation: fade-in-up 0.6s ease-out forwards; 
+  }
+
+  /* Preserved styles from original that were not in the new hero's specific style block */
   @keyframes pulse-gentle { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
-  @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  .animate-float { animation: float 8s ease-in-out infinite; }
-  .animate-float-delayed { animation: float-delayed 10s ease-in-out infinite; animation-delay: 2s; }
   .animate-pulse-gentle { animation: pulse-gentle 3s ease-in-out infinite; }
-  .animate-spin-slow { animation: spin-slow 4s linear infinite; }
-  .animation-delay-1000 { animation-delay: 1s; }
+
   @keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
   .animate-gradient-shift { background-size: 200% 200%; animation: gradient-shift 4s ease infinite; }
+  
   .group:hover .animate-ping { animation-duration: 0.5s; }
-  @keyframes gradient-x { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-  .animate-gradient-x { background-size: 200% 200%; animation: gradient-x 3s ease infinite; }
-  @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  .animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+
+  /* Utility class, definition is the same in both, kept for clarity */
+  .animation-delay-1000 { animation-delay: 1s; }
 `}</style>
     </div>
   );
