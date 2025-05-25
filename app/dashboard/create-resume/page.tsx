@@ -6,8 +6,9 @@ import { useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, 
-    Download as DownloadIcon, Mail, Copy, 
-    Sparkles
+    Download as DownloadIcon, Mail, Copy,
+    MailCheck, 
+    
 } from 'lucide-react';
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';
@@ -476,7 +477,7 @@ function CreateResumePageContent() {
                             className="w-full sm:w-auto sm:flex-1 py-2.5"
                             size="lg"
                         >
-                            {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                            {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <MailCheck className="w-5 h-5 mr-2" />}
                             Generate with AI
                         </Button>
                         {generatedCoverLetter && (

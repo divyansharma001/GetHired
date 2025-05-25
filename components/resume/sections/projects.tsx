@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Trash2, Link as LinkIcon, Github, Sparkles, Loader2, Briefcase } from 'lucide-react';
+import { PlusCircle, Trash2, Link as LinkIcon, Github, Loader2, Briefcase, MailCheck } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { cn } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
@@ -228,7 +228,7 @@ const ProjectsSection: React.FC = () => {
                         {enhancingProjectIndex === index ? (
                             <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
                         ) : (
-                            <Sparkles className="w-3.5 h-3.5 mr-1" />
+                            <MailCheck className="w-3.5 h-3.5 mr-1" />
                         )}
                         AI Enhance
                     </Button>

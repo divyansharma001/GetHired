@@ -6,10 +6,11 @@ import Link from 'next/link';
 // ... other imports
 import { 
     ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, 
-    Sparkles, TrendingUp, Zap, Target, FileText as FileTextIconLucide,
+    TrendingUp, Zap, Target, FileText as FileTextIconLucide,
     LogIn, Edit2, DownloadCloud, BarChart2, ListChecks, ShieldCheck, Briefcase, // New icons for features
     Github, Linkedin, Twitter as TwitterIcon, // Icons for Footer
-    MailCheckIcon
+    MailCheckIcon,
+    MailCheck
 } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import SlidingCompanies from './sliding-company';
@@ -278,7 +279,7 @@ const LandingPageContent = () => {
         } as React.CSSProperties}
     >
       <nav className={`flex items-center justify-between px-4 sm:px-6 py-3 max-w-7xl mx-auto ${isDark ? 'bg-neutral-950/80' : 'bg-slate-50/80'} backdrop-blur-md sticky top-0 z-50 border-b ${themeClasses.border}`}>
-        <Link href="/" className="flex items-center space-x-2"> <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md"> <Sparkles className="w-4 h-4 text-white" /> </div> <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent"> GetHired </span> </Link>
+        <Link href="/" className="flex items-center space-x-2"> <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md"> <MailCheck className="w-4 h-4 text-white" /> </div> <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent"> GetHired </span> </Link>
         <div className="hidden md:flex items-center space-x-6"> <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Features</a> <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Pricing</a> <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Examples</a> <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Reviews</a> </div>
         <div className="flex items-center space-x-3"> <button onClick={toggleTheme} className={`p-2 rounded-md ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`} aria-label="Toggle theme"> {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} </button> <Link href="/sign-in" className={`${themeClasses.textMuted} hover:${themeClasses.text} text-sm font-medium transition-colors`}> Sign in </Link> <Link href="/sign-up" className={`${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5`}> Get Started </Link> </div>
       </nav>
