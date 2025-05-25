@@ -93,30 +93,30 @@ export async function getAtsScoreAndSuggestions(resumeData: Partial<ResumeData>)
 
  const prompt = `
     You are an expert ATS (Applicant Tracking System) resume analyzer.
-    Analyze the following resume content and provide an ATS compatibility score and suggestions.
+    Analyze the following resume content and provide a detailed ATS compatibility assessment.
     The output MUST be a single, valid JSON object adhering strictly to this TypeScript interface:
     \`\`\`typescript
     interface ATSScoreDetails {
-      overall: number; // Score from 0 to 100, representing ATS friendliness.
-      breakdown?: { // This 'breakdown' object contains specific categories. Each category has a score and its own suggestions array.
-        keywords: { score: number; suggestions: string[]; };
+      overall: number; // Holistic ATS friendliness score (0-100).
+      breakdown?: { 
+        keywords: { score: number; suggestions: string[]; }; 
         clarityAndConciseness: { score: number; suggestions: string[]; };
         actionVerbs: { score: number; suggestions: string[]; };
         quantifiableResults: { score: number; suggestions: string[]; };
-        formattingAndConciseness: { score: number; suggestions: string[]; }; // For general structure, not detailed visuals.
+        formattingAndConciseness: { score: number; suggestions: string[]; };
         lengthAndRelevance: { score: number; suggestions: string[]; };
       }; // End of the 'breakdown' object.
-      suggestions: string[]; // This is a TOP-LEVEL array for 2-4 concise, actionable, overall suggestions. DO NOT put this array inside the 'breakdown' object.
+      suggestions: string[]; // <<<<---- VERY IMPORTANT: This is a TOP-LEVEL array for 2-4 concise, actionable, overall suggestions. This 'suggestions' array MUST NOT be inside the 'breakdown' object. It must be a direct property of the root JSON object.
     }
     \`\`\`
-    Ensure all string values in the JSON are properly escaped. The "overall" score is holistic. All "score" fields are 0-100.
-    The top-level 'suggestions' array should always exist and contain 2-4 high-level improvement points.
-    Do not include any text, markdown (like \`\`\`json\`), or anything outside the single JSON object.
-    Your response must start with "{" and end with "}".
+    For each category in 'breakdown', provide a 'score' (0-100) and a 'suggestions' array (1-2 concise points, or an empty array if the category is strong).
+    The top-level 'suggestions' array is mandatory and should always exist and contain 2-4 high-level improvement points.
+    Ensure all string values in the JSON are properly escaped. Do not include any text, markdown (like \`\`\`json\`), or anything else outside the single JSON object itself.
+    Your entire response must start with "{" and end with "}".
 
     Resume Content to Analyze:
     ---
-    ${resumeTextContent}
+    ${constructResumeText(resumeData)}
     ---
   `;
 
@@ -155,36 +155,47 @@ export async function getAtsScoreAndSuggestions(resumeData: Partial<ResumeData>)
         throw new Error("Cleaned JSON text is empty after attempting to extract from AI response.");
       }
       
-      const parsedResult = JSON.parse(cleanedJsonText) as ATSScoreDetails;
+       // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       const parsedAsAny = JSON.parse(cleanedJsonText) as any;
+
+      // ---- START: NORMALIZATION LOGIC (CRUCIAL) ----
+      if ((!parsedAsAny.suggestions || !Array.isArray(parsedAsAny.suggestions)) && 
+          parsedAsAny.breakdown && 
+          Array.isArray(parsedAsAny.breakdown.suggestions)) {
+          console.warn("[ATS Scorer] NORMALIZING: Top-level 'suggestions' missing. Moving 'breakdown.suggestions' to top level and deleting from breakdown.");
+          parsedAsAny.suggestions = parsedAsAny.breakdown.suggestions;
+          delete parsedAsAny.breakdown.suggestions; 
+      }
+      // ---- END: NORMALIZATION LOGIC ----
       
-      // Validate essential top-level properties
-      if (typeof parsedResult.overall !== 'number' || 
-          parsedResult.overall < 0 || parsedResult.overall > 100 ||
-          !parsedResult.suggestions || 
-          !Array.isArray(parsedResult.suggestions)) {
-          console.error("[ATS Scorer] Parsed JSON missing/invalid 'overall' or 'suggestions'. Content:", cleanedJsonText);
-          throw new Error("Parsed JSON does not match expected structure (overall/suggestions).");
+      const finalResult = parsedAsAny as ATSScoreDetails;
+
+      // Validate essential top-level properties AFTER normalization
+      if (typeof finalResult.overall !== 'number' || finalResult.overall < 0 || finalResult.overall > 100 ||
+          !finalResult.suggestions || !Array.isArray(finalResult.suggestions) || finalResult.suggestions.length === 0 ) {
+          console.error("[ATS Scorer] VALIDATION FAILED: Final JSON missing/invalid 'overall' or TOP-LEVEL 'suggestions'.", finalResult);
+          throw new Error("Final JSON does not match structure (overall or top-level suggestions missing, empty, or invalid).");
       }
 
-      // Validate or provide defaults for breakdown
-      if (!parsedResult.breakdown) {
-        console.warn("[ATS Scorer] AI response missing 'breakdown' object. Providing default.");
-        parsedResult.breakdown = defaultAtsScoreDetails.breakdown;
+      // ... (rest of your breakdown validation logic - this should be fine if the above is correct)
+      // Ensure defaultAtsScoreDetails and the breakdown validation use "formattingAndConciseness"
+      const requiredBreakdownKeys: (keyof NonNullable<ATSScoreDetails['breakdown']>)[] = 
+          ["keywords", "clarityAndConciseness", "actionVerbs", "quantifiableResults", "formattingAndConciseness", "lengthAndRelevance"];
+      
+      if (!finalResult.breakdown) {
+        console.warn("[ATS Scorer] AI response missing 'breakdown' object. Providing default breakdown.");
+        finalResult.breakdown = { ...defaultAtsScoreDetails.breakdown! };
       } else {
-        const requiredKeys: (keyof NonNullable<ATSScoreDetails['breakdown']>)[] = [
-            "keywords", "clarityAndConciseness", "actionVerbs", 
-            "quantifiableResults", "formattingAndConciseness", "lengthAndRelevance"
-        ];
-        for (const key of requiredKeys) {
-            const currentKey = key as keyof NonNullable<ATSScoreDetails['breakdown']>;
-            const category = parsedResult.breakdown[currentKey];
-            if (!category || typeof category.score !== 'number' || category.score < 0 || category.score > 100 || !Array.isArray(category.suggestions)) {
-                 console.warn(`[ATS Scorer] Breakdown for key '${currentKey}' is missing or malformed. Applying default.`);
-                 parsedResult.breakdown[currentKey] = defaultAtsScoreDetails.breakdown![currentKey]!;
+        for (const key of requiredBreakdownKeys) {
+            const category = finalResult.breakdown[key];
+            if (!category || typeof category.score !== 'number' || category.score < 0 || category.score > 100 || 
+                !Array.isArray(category.suggestions)) {
+                 console.warn(`[ATS Scorer] Breakdown for '${key}' malformed or missing. Applying default.`);
+                 finalResult.breakdown[key] = { ...defaultAtsScoreDetails.breakdown![key]! };
             }
         }
       }
-      return parsedResult;
+      return finalResult;
 
     } catch (error) {
       console.error(`[ATS Scorer Attempt ${attempt}] Error parsing or validating JSON:`, error);

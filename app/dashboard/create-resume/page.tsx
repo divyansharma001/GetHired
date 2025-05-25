@@ -14,6 +14,10 @@ import { useResumeStore } from '@/hooks/use-resume'; // Keep for getState() if a
 import { useShallowResumeSelector, ShallowSelectedResumeParts } from '@/hooks/useShallowResumeSelector';
 import { ResumeData, EducationEntry, ExperienceEntry, ProjectEntry, SkillEntry, PersonalInfo } from '@/types/resume';
 import { useTheme } from '@/context/theme-provider';
+import { Download } from 'lucide-react'; // Add Download icon
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import SimpleTemplate from '@/components/resume/templates/simple-template';
 
 const resumeSections = ['Personal Info', 'Education', 'Experience', 'Skills', 'Projects', 'Review'];
 const totalSteps = resumeSections.length;
@@ -25,10 +29,12 @@ function CreateResumePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeIdFromParams = searchParams.get('resumeId');
-
+ const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false); 
   const [currentStep, setCurrentStep] = useState(0);
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
+
 
   const themeClasses = { 
     textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
@@ -61,6 +67,8 @@ function CreateResumePageContent() {
 
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+
+  const [showPdfPreviewForCapture, setShowPdfPreviewForCapture] = useState(false);
 
   // Using useCallback for functions passed to useEffect if they are redefined on each render
   // However, loadResume and resetResume from Zustand store are typically stable.
@@ -184,6 +192,88 @@ function CreateResumePageContent() {
       </div>
     );
   }
+
+ 
+
+const handleDownloadPdf = async () => {
+  setIsGeneratingPdf(true);
+  setShowPdfPreviewForCapture(true);
+
+  // Declare resumeContentElement here so it's accessible in finally if needed, though not strictly necessary for this logic
+  let resumeContentElement: HTMLElement | null = null; 
+
+  try {
+    // Give React a moment to render the hidden template
+    await new Promise(resolve => setTimeout(resolve, 200)); // Increased slightly for good measure
+
+    resumeContentElement = document.getElementById('resume-content-for-pdf');
+    
+    if (!resumeContentElement) {
+      // This alert will now correctly indicate the element wasn't found AFTER the attempt to get it.
+      alert("Error: Resume content for PDF rendering could not be found in the DOM. Please try again.");
+      // No need to set visibility if element is null
+      setIsGeneratingPdf(false);
+      setShowPdfPreviewForCapture(false);
+      return;
+    }
+
+    // Optional: Briefly make it visible for html2canvas if issues persist, then hide again
+    // resumeContentElement.style.visibility = 'visible'; 
+    // await new Promise(resolve => setTimeout(resolve, 50)); // Very short delay
+
+    const canvas = await html2canvas(resumeContentElement, {
+      scale: 2,
+      useCORS: true,
+      logging: false, // Set to true for html2canvas debugging if needed
+      // Ensure html2canvas captures based on the element's actual rendered size
+      // width: resumeContentElement.offsetWidth, // or scrollWidth
+      // height: resumeContentElement.offsetHeight, // or scrollHeight
+    });
+
+    // resumeContentElement.style.visibility = 'hidden'; // Hide again if made visible
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfPageHeight = pdf.internal.pageSize.getHeight();
+    const imgProps = pdf.getImageProperties(imgData);
+    const imgHeightInPdfUnits = (imgProps.height * pdfWidth) / imgProps.width;
+
+    let heightLeft = imgHeightInPdfUnits;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
+    heightLeft -= pdfPageHeight;
+
+    while (heightLeft > 0) {
+      position -= pdfPageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
+      heightLeft -= pdfPageHeight;
+    }
+    
+    const resumeTitleForFile = useResumeStore.getState().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+    pdf.save(`${resumeTitleForFile || 'resume'}.pdf`);
+
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    alert("Failed to generate PDF. Please try again.");
+    // If resumeContentElement was found and made visible, hide it on error
+    // if (resumeContentElement) resumeContentElement.style.visibility = 'hidden'; 
+  } finally {
+    setIsGeneratingPdf(false);
+    setShowPdfPreviewForCapture(false); // Always hide the capture div
+  }
+};
+
+
+
+
   
   return (
     <div className={`min-h-screen flex flex-col ${themeClasses.pageBg} transition-colors duration-300`}>
@@ -241,6 +331,16 @@ function CreateResumePageContent() {
                 {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 {currentResumeIdInStore ? 'Save Changes' : 'Save Draft'}
               </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleDownloadPdf} 
+                  disabled={isGeneratingPdf || isSaving} // Disable if saving or generating PDF
+                  className={`${themeClasses.buttonOutline} flex items-center`}
+                >
+                  {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                  PDF
+                </Button>
               <UserButton 
                 appearance={{ 
                     elements: { 
@@ -290,6 +390,20 @@ function CreateResumePageContent() {
           <AtsScoreDisplay />
           <ResumePreview />
         </div>
+
+        {/* Hidden PDF Template for Download */}  
+         {showPdfPreviewForCapture && ( // This state variable controls if SimpleTemplate is rendered
+        <div style={{
+            position: 'absolute',
+            left: '-9999px', // Way off-screen
+            top: 'auto',
+            width: '210mm',     // A4 width for layout consistency before capture
+            backgroundColor: '#fff', // Ensures canvas doesn't have transparent background
+        }}>
+            {/* This renders the div with id="resume-content-for-pdf" */}
+            <SimpleTemplate resumeData={useResumeStore.getState()} />
+        </div>
+    )}
       </main>
     </div>
   );
