@@ -11,10 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { PersonalInfo } from '@/types/resume';
 import { Sparkles, Loader2 } from 'lucide-react';
-import { useTheme } from '@/context/theme-provider'; // Import useTheme
-import { cn } from '@/lib/utils'; // Import cn
+import { useTheme } from '@/context/theme-provider';
+import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
-// Zod schema for validation (remains the same)
+// Zod schema (remains the same)
 const personalInfoSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
@@ -26,7 +27,7 @@ const personalInfoSchema = z.object({
   summary: z.string().min(20, "Summary should be at least 20 characters").max(1000, "Summary too long"),
 });
 
-// Define AppTheme directly for this component (or import from a central config)
+// Define AppTheme (remains the same)
 function getAppTheme(isDark: boolean) {
   return {
     textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
@@ -38,60 +39,44 @@ function getAppTheme(isDark: boolean) {
 }
 
 const PersonalInfoSection: React.FC = () => {
-  const { personalInfo, updatePersonalInfo } = useResumeStore();
-  const { theme } = useTheme(); // Get theme
+  const { personalInfo: storePersonalInfo, updatePersonalInfo } = useResumeStore();
+  const { theme } = useTheme();
   const isDark = theme === 'dark';
-  const appTheme = getAppTheme(isDark); // Get themed classes
+  const appTheme = getAppTheme(isDark);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { control, handleSubmit, formState: { errors }, watch, setValue } = useForm<PersonalInfo>({
+  const { control, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm<PersonalInfo>({
     resolver: zodResolver(personalInfoSchema),
-    defaultValues: personalInfo,
+    defaultValues: storePersonalInfo,
   });
 
-  // In PersonalInfoSection.tsx
-useEffect(() => {
-  const subscription = watch((formValues, { name, type }) => {
-    // Only proceed if it's an actual change event and a specific field was changed
-    if (type === 'change' && name) {
-      // Compare with current store state before updating to prevent unnecessary updates
-      // This requires getting the current store state here, or being more selective
-      // For simplicity now, we'll just update. A more robust check would compare.
-      
-      // Construct the payload carefully based on what changed.
-      // If `formValues` is the whole PersonalInfo object from RHF:
-      if (name && name.startsWith("firstName") || name.startsWith("lastName") /* etc. for all fields in PersonalInfo */) {
-         // A simple way for non-array sections:
-         // Check if the new formValues.personalInfo (if your form is structured that way)
-         // is different from the store's personalInfo before calling update.
-         // However, `formValues` in watch is the entire form object.
-         // `value` passed to updatePersonalInfo should be just the PersonalInfo part.
-
-         // Let's assume `formValues` is the PersonalInfo object for this form scope.
-         const currentStoreInfo = useResumeStore.getState().personalInfo;
-         if (JSON.stringify(formValues) !== JSON.stringify(currentStoreInfo)) { // Deep compare (can be costly for large objects)
-            updatePersonalInfo(formValues as PersonalInfo);
-         }
-      }
+  // Effect to update RHF if storePersonalInfo changes from an external source
+  useEffect(() => {
+    if (JSON.stringify(storePersonalInfo) !== JSON.stringify(watch())) {
+      reset(storePersonalInfo);
     }
-  });
-  return () => subscription.unsubscribe();
-}, [watch, updatePersonalInfo]);
+  }, [storePersonalInfo, reset, watch]);
 
+  // Debounce the function that updates the Zustand store
+  const debouncedUpdateStore = useDebouncedCallback(
+    (data: PersonalInfo) => {
+      updatePersonalInfo(data);
+    },
+    500 // Debounce time in ms
+  );
 
-
+  // Effect to watch RHF changes and call the debounced store update
   useEffect(() => {
     const subscription = watch((value) => {
-      updatePersonalInfo(value as PersonalInfo);
+      debouncedUpdateStore(value as PersonalInfo);
     });
     return () => subscription.unsubscribe();
-  }, [watch, updatePersonalInfo]);
+  }, [watch, debouncedUpdateStore]);
 
   const [isEnhancingSummary, setIsEnhancingSummary] = useState(false);
 
   const handleAiEnhanceSummary = async () => {
     const currentSummaryValue = watch("summary");
-    const resumeTitle = useResumeStore.getState().title; // Get current resume title for context
+    const resumeTitle = useResumeStore.getState().title;
 
     if (!currentSummaryValue || currentSummaryValue.trim().length < 10) {
       alert("Please write a brief summary first (at least 10 characters).");
@@ -104,7 +89,7 @@ useEffect(() => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
             currentSummary: currentSummaryValue,
-            resumeTitle: resumeTitle // Pass resume title
+            resumeTitle: resumeTitle,
         }),
       });
       if (!response.ok) {
@@ -113,7 +98,6 @@ useEffect(() => {
       }
       const { enhancedSummary } = await response.json();
       setValue("summary", enhancedSummary, { shouldDirty: true, shouldValidate: true });
-      // Consider using a toast notification instead of alert
       alert("Summary enhanced by AI! Please review.");
     } catch (error) {
       console.error("AI Summary Enhancement error:", error);
@@ -124,7 +108,7 @@ useEffect(() => {
   };
 
   return (
-    <form className="space-y-6 sm:space-y-8"> {/* Increased spacing for larger screens */}
+    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
       <h2 className={cn("text-xl sm:text-2xl font-semibold border-b pb-4 mb-6 sm:mb-8", appTheme.textHeading, appTheme.borderSecondary)}>
         Personal Information
       </h2>
@@ -180,7 +164,7 @@ useEffect(() => {
                 size="sm"
                 onClick={handleAiEnhanceSummary}
                 disabled={isEnhancingSummary}
-                className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)} // Ensure flex and items-center
+                className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)}
             >
                 {isEnhancingSummary ? (
                     <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />

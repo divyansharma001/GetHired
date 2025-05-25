@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // components/resume/sections/education.tsx
 'use client';
 import React, { useEffect } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,11 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { EducationEntry } from '@/types/resume';
 import { PlusCircle, Trash2, CalendarDays } from 'lucide-react';
-import { useTheme } from '@/context/theme-provider'; // Import useTheme
-import { cn } from '@/lib/utils'; // Import cn
+import { useTheme } from '@/context/theme-provider';
+import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
 const educationEntrySchema = z.object({
   id: z.string(),
@@ -33,14 +32,12 @@ const educationSchema = z.object({
 
 type EducationFormData = z.infer<typeof educationSchema>;
 
-// Define AppTheme directly for this component (or import from a central config)
 function getAppTheme(isDark: boolean) {
   return {
     textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
     textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
     borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
     errorText: isDark ? 'text-red-400' : 'text-red-500',
-    // Styles for individual entry cards/sections
     entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
     entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
     iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
@@ -48,25 +45,26 @@ function getAppTheme(isDark: boolean) {
 }
 
 const EducationSection: React.FC = () => {
-  const { education, updateEducation: updateStoreEducation, addEducation: addStoreEducation, removeEducation: removeStoreEducation } = useResumeStore();
+  const { 
+    education: storeEducation, 
+    updateEducation: updateStoreEducation, 
+    addEducation: addStoreEducation, 
+    removeEducation: removeStoreEducation 
+  } = useResumeStore();
+  
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const appTheme = getAppTheme(isDark);
 
   const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<EducationFormData>({
     resolver: zodResolver(educationSchema),
-    defaultValues: { education: [] }, // Initialize with empty array, then populate via useEffect
+    defaultValues: { 
+      education: storeEducation.map(edu => ({
+        ...edu,
+        achievements: edu.achievements?.join('\n') || '',
+      })) 
+    },
   });
-
-  useEffect(() => {
-    // Populate RHF with data from Zustand store when component mounts or store data changes
-    const storeEducation = education.map(edu => ({
-      ...edu,
-      achievements: edu.achievements?.join('\n') || '',
-    }));
-    reset({ education: storeEducation });
-  }, [education, reset]);
-
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -74,25 +72,66 @@ const EducationSection: React.FC = () => {
   });
 
   useEffect(() => {
-    const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.education) { // Only update store on actual field changes
-        value.education.forEach((eduData, index) => {
-          if (eduData && fields[index]) { // Ensure field exists
-            const achievementsArray = eduData.achievements?.split('\n').filter(ach => ach.trim() !== '');
-            // Ensure ID is preserved from RHF 'fields' if `eduData.id` is undefined (can happen if RHF adds temp ID)
-            const idToUpdate = eduData.id || fields[index].id;
+    const storeEducationForRHF = storeEducation.map(edu => ({
+      ...edu,
+      achievements: edu.achievements?.join('\n') || '',
+    }));
+    if (JSON.stringify(storeEducationForRHF) !== JSON.stringify(watch("education"))) {
+      reset({ education: storeEducationForRHF });
+    }
+  }, [storeEducation, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (educationArrayFromForm: EducationFormData['education']) => {
+      educationArrayFromForm.forEach((eduData, index) => {
+        const achievementsArray = eduData.achievements?.split('\n').filter(ach => ach.trim() !== '') || [];
+        const idToUpdate = eduData.id || (fields[index] ? fields[index].id : undefined);
+        
+        if (idToUpdate) {
+            // Check if store action needs index or if it can find by ID
+            // Assuming updateStoreEducation finds by index if using original store's updateEducation(index, data)
+            // Or if it finds by ID, pass the ID
+            // Current updateStoreEducation(index, data) is fine here.
             updateStoreEducation(index, { ...eduData, id: idToUpdate, achievements: achievementsArray });
-          }
-        });
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      if (name && name.startsWith('education') && type === 'change' && value.education) {
+        // Filter out undefined entries and ensure all required fields are present
+        const validEducationEntries = value.education.filter((edu): edu is NonNullable<typeof edu> & {
+          id: string;
+          institution: string;
+          degree: string;
+          field: string;
+          startDate: string;
+          endDate: string;
+        } => 
+          edu !== undefined && 
+          edu.id !== undefined && 
+          edu.institution !== undefined && 
+          edu.degree !== undefined && 
+          edu.field !== undefined && 
+          edu.startDate !== undefined && 
+          edu.endDate !== undefined
+        );
+        
+        if (validEducationEntries.length > 0) {
+          debouncedUpdateStore(validEducationEntries);
+        }
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, updateStoreEducation, fields]);
+  }, [watch, debouncedUpdateStore, fields]);
 
   const handleAddEducation = () => {
-    const newId = addStoreEducation(); // Add to store, get new ID
+    const newId = addStoreEducation();
     append({ 
-      id: newId, // Use the ID from the store
+      id: newId, 
       institution: '', 
       degree: '', 
       field: '', 
@@ -105,12 +144,12 @@ const EducationSection: React.FC = () => {
 
   const handleRemoveEducation = (index: number) => {
     const eduIdToRemove = fields[index].id;
-    removeStoreEducation(eduIdToRemove); // Remove from Zustand store by actual ID
-    remove(index); // Remove from RHF field array
+    removeStoreEducation(eduIdToRemove);
+    remove(index);
   };
-
+  
   return (
-    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}> {/* Added dummy onSubmit to satisfy RHF */}
+    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
         <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Education</h2>
         <Button type="button" variant="outline" size="sm" onClick={handleAddEducation}>
@@ -141,9 +180,6 @@ const EducationSection: React.FC = () => {
                 <Trash2 className="w-4 h-4" />
               </Button>
               
-              {/* RHF Controller does not need register for id, it's part of the field object */}
-              {/* <input type="hidden" {...register(`education.${index}.id`)} /> */}
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
                   <Label htmlFor={`education.${index}.institution`}>Institution Name</Label>

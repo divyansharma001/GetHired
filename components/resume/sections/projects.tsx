@@ -10,11 +10,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ProjectEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Link as LinkIcon, Github, Sparkles, Loader2, Briefcase } from 'lucide-react'; // Added Briefcase for tip
+import { PlusCircle, Trash2, Link as LinkIcon, Github, Sparkles, Loader2, Briefcase } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
 const projectEntrySchema = z.object({
   id: z.string(),
@@ -31,7 +30,6 @@ const projectsSchema = z.object({
 
 type ProjectsFormData = z.infer<typeof projectsSchema>;
 
-// Define AppTheme (or import from a central config)
 function getAppTheme(isDark: boolean) {
   return {
     textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
@@ -42,30 +40,33 @@ function getAppTheme(isDark: boolean) {
     entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
     iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
     aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
-    tipBoxBg: isDark ? 'bg-green-900/20 border-green-500/30' : 'bg-green-50 border-green-200', // Different tip color
+    tipBoxBg: isDark ? 'bg-green-900/20 border-green-500/30' : 'bg-green-50 border-green-200',
     tipBoxText: isDark ? 'text-green-300' : 'text-green-700',
   };
 }
 
 const ProjectsSection: React.FC = () => {
-  const { projects, updateProject: updateStoreProject, addProject: addStoreProject, removeProject: removeStoreProject } = useResumeStore();
+  const { 
+    projects: storeProjects, 
+    updateProject: updateStoreProject, 
+    addProject: addStoreProject, 
+    removeProject: removeStoreProject 
+  } = useResumeStore();
+  
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const appTheme = getAppTheme(isDark);
-  const resumeTitle = useResumeStore(state => state.title); // For AI context
+  const resumeTitle = useResumeStore(state => state.title);
 
   const { control, register, handleSubmit, watch, formState: { errors }, setValue, reset } = useForm<ProjectsFormData>({
     resolver: zodResolver(projectsSchema),
-    defaultValues: { projects: [] },
+    defaultValues: { 
+      projects: storeProjects.map(proj => ({
+        ...proj,
+        technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
+      })) 
+    },
   });
-
-  useEffect(() => {
-    const storeProjects = projects.map(proj => ({
-      ...proj,
-      technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
-    }));
-    reset({ projects: storeProjects });
-  }, [projects, reset]);
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -73,22 +74,45 @@ const ProjectsSection: React.FC = () => {
   });
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const storeProjectsForRHF = storeProjects.map(proj => ({
+      ...proj,
+      technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
+    }));
+    if (JSON.stringify(storeProjectsForRHF) !== JSON.stringify(watch("projects"))) {
+      reset({ projects: storeProjectsForRHF });
+    }
+  }, [storeProjects, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (projectsArrayFromForm: ProjectsFormData['projects']) => {
+      projectsArrayFromForm.forEach((projData, index) => {
+        const techArray = typeof projData.technologies === 'string'
+          ? projData.technologies.split(',').map(t => t.trim()).filter(t => t)
+          : [];
+        const idToUpdate = projData.id || (fields[index] ? fields[index].id : undefined);
+        if (idToUpdate) {
+          updateStoreProject(index, {...projData, id: idToUpdate, technologies: techArray});
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
     const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.projects) {
-        value.projects.forEach((projData, index) => {
-          if (projData && fields[index]) {
-            const techArray = typeof projData.technologies === 'string'
-              ? projData.technologies.split(',').map(t => t.trim()).filter(t => t)
-              : []; // Ensure it's an array for the store
-            const idToUpdate = projData.id || fields[index].id;
-            updateStoreProject(index, {...projData, id: idToUpdate, technologies: techArray});
-          }
-        });
+      if (name && name.startsWith('projects') && type === 'change' && value.projects) {
+        const validProjects = value.projects.filter((project): project is NonNullable<typeof project> & { id: string; name: string; description: string; technologies: string } => 
+          project != null && 
+          typeof project.id === 'string' && 
+          typeof project.name === 'string' && 
+          typeof project.description === 'string' && 
+          typeof project.technologies === 'string'
+        );
+        debouncedUpdateStore(validProjects);
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, updateStoreProject, fields]);
+  }, [watch, debouncedUpdateStore, fields]);
 
   const handleAddProject = () => {
     const newId = addStoreProject();
@@ -127,7 +151,7 @@ const ProjectsSection: React.FC = () => {
           technologies: typeof currentProject.technologies === 'string' 
             ? currentProject.technologies.split(',').map(t => t.trim()).filter(Boolean) 
             : [],
-          resumeTitle: resumeTitle, // Pass resume title for context
+          resumeTitle: resumeTitle,
         }),
       });
       if (!response.ok) {

@@ -1,7 +1,7 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// components/resume/sections/experience.tsx
+// components/resume/sections/education.tsx
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -10,30 +10,28 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExperienceEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Sparkles, CalendarDays, Target, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, CalendarDays } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
-const experienceEntrySchema = z.object({
+const educationEntrySchema = z.object({
   id: z.string(),
-  company: z.string().min(1, "Company name is required"),
-  position: z.string().min(1, "Position/Title is required"),
-  startDate: z.string().min(4, "Start date is required (e.g., YYYY-MM)"),
-  endDate: z.string().min(4, "End date is required (e.g., YYYY-MM or Present)"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long."),
+  institution: z.string().min(1, "Institution name is required"),
+  degree: z.string().min(1, "Degree is required"),
+  field: z.string().min(1, "Field of study is required"),
+  startDate: z.string().min(4, "Start date is required (e.g., YYYY or YYYY-MM)"),
+  endDate: z.string().min(4, "End date is required (e.g., YYYY, YYYY-MM or Present)"),
+  gpa: z.string().optional(),
   achievements: z.string().optional(),
-  targetCompanyValues: z.string().optional(),
 });
 
-const experienceSchema = z.object({
-  experience: z.array(experienceEntrySchema),
+const educationSchema = z.object({
+  education: z.array(educationEntrySchema),
 });
 
-type ExperienceFormData = z.infer<typeof experienceSchema>;
+type EducationFormData = z.infer<typeof educationSchema>;
 
-// Define AppTheme (or import from a central config)
 function getAppTheme(isDark: boolean) {
   return {
     textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
@@ -43,119 +41,119 @@ function getAppTheme(isDark: boolean) {
     entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
     entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
     iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
   };
 }
 
-const ExperienceSection: React.FC = () => {
-  const { experience, updateExperience: updateStoreExperience, addExperience: addStoreExperience, removeExperience: removeStoreExperience } = useResumeStore();
+const EducationSection: React.FC = () => {
+  const { 
+    education: storeEducation, 
+    updateEducation: updateStoreEducation, 
+    addEducation: addStoreEducation, 
+    removeEducation: removeStoreEducation 
+  } = useResumeStore();
+  
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const appTheme = getAppTheme(isDark);
-  
-  const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
-  const resumeTitle = useResumeStore(state => state.title);
 
-  const { control, register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<ExperienceFormData>({
-    resolver: zodResolver(experienceSchema),
-    defaultValues: { experience: [] }, // Initialize with empty, populate via useEffect
+  const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<EducationFormData>({
+    resolver: zodResolver(educationSchema),
+    defaultValues: { 
+      education: storeEducation.map(edu => ({
+        ...edu,
+        achievements: edu.achievements?.join('\n') || '',
+      })) 
+    },
   });
-  
-  useEffect(() => {
-    const storeExperience = experience.map(exp => ({
-      ...exp,
-      achievements: exp.achievements?.join('\n') || '',
-      targetCompanyValues: exp.targetCompanyValues || '',
-    }));
-    reset({ experience: storeExperience });
-  }, [experience, reset]);
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "experience",
+    name: "education",
   });
 
   useEffect(() => {
+    const storeEducationForRHF = storeEducation.map(edu => ({
+      ...edu,
+      achievements: edu.achievements?.join('\n') || '',
+    }));
+    if (JSON.stringify(storeEducationForRHF) !== JSON.stringify(watch("education"))) {
+      reset({ education: storeEducationForRHF });
+    }
+  }, [storeEducation, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (educationArrayFromForm: EducationFormData['education']) => {
+      educationArrayFromForm.forEach((eduData, index) => {
+        const achievementsArray = eduData.achievements?.split('\n').filter(ach => ach.trim() !== '') || [];
+        const idToUpdate = eduData.id || (fields[index] ? fields[index].id : undefined);
+        
+        if (idToUpdate) {
+            // Check if store action needs index or if it can find by ID
+            // Assuming updateStoreEducation finds by index if using original store's updateEducation(index, data)
+            // Or if it finds by ID, pass the ID
+            // Current updateStoreEducation(index, data) is fine here.
+            updateStoreEducation(index, { ...eduData, id: idToUpdate, achievements: achievementsArray });
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
     const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.experience) {
-        value.experience.forEach((expData, index) => {
-          if (expData && fields[index]) {
-            const achievementsArray = expData.achievements?.split('\n').filter(ach => ach.trim() !== '');
-            const idToUpdate = expData.id || fields[index].id;
-            updateStoreExperience(index, { ...expData, id: idToUpdate, achievements: achievementsArray });
-          }
+      if (name && name.startsWith('education') && type === 'change' && value.education) {
+        const validEducationEntries = value.education.filter((edu): edu is NonNullable<typeof edu> & {
+          id: string;
+          institution: string;
+          degree: string;
+          field: string;
+          startDate: string;
+          endDate: string;
+        } => {
+          return edu != null && 
+                 typeof edu.id === 'string' && 
+                 typeof edu.institution === 'string' && 
+                 typeof edu.degree === 'string' && 
+                 typeof edu.field === 'string' && 
+                 typeof edu.startDate === 'string' && 
+                 typeof edu.endDate === 'string';
         });
+        
+        if (validEducationEntries.length > 0) {
+          debouncedUpdateStore(validEducationEntries);
+        }
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, updateStoreExperience, fields]);
+  }, [watch, debouncedUpdateStore, fields]);
 
-  const handleAddExperience = () => {
-    const newId = addStoreExperience();
-    append({
-      id: newId,
-      company: '',
-      position: '',
-      startDate: '',
-      endDate: '',
-      description: '',
-      achievements: '',
-      targetCompanyValues: ''
+  const handleAddEducation = () => {
+    const newId = addStoreEducation();
+    append({ 
+      id: newId, 
+      institution: '', 
+      degree: '', 
+      field: '', 
+      startDate: '', 
+      endDate: '', 
+      gpa: '', 
+      achievements: '' 
     });
   };
 
-  const handleRemoveExperience = (index: number) => {
-    const expIdToRemove = fields[index].id;
-    removeStoreExperience(expIdToRemove);
+  const handleRemoveEducation = (index: number) => {
+    const eduIdToRemove = fields[index].id;
+    removeStoreEducation(eduIdToRemove);
     remove(index);
   };
-
-  const handleAiEnhance = async (index: number) => {
-    setEnhancingIndex(index);
-    const currentEntry = watch(`experience.${index}`);
-
-    if (!currentEntry || !currentEntry.description) {
-      alert("Please provide a description for the experience entry first.");
-      setEnhancingIndex(null);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/ai/enhance-experience', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: currentEntry.description,
-          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''),
-          title: resumeTitle,
-          jobTitle: currentEntry.position,
-          targetCompanyValues: currentEntry.targetCompanyValues || '',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `AI enhancement failed: ${response.statusText}`);
-      }
-      const enhancedData = await response.json();
-      setValue(`experience.${index}.description`, enhancedData.enhancedDescription, { shouldDirty: true, shouldValidate: true });
-      setValue(`experience.${index}.achievements`, enhancedData.suggestedAchievements.join('\n'), { shouldDirty: true, shouldValidate: true });
-      alert("Experience enhanced! Review the changes and the suggested achievements.");
-    } catch (error) {
-      console.error("AI Enhancement error:", error);
-      alert(`AI Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setEnhancingIndex(null);
-    }
-  };
-
+  
   return (
     <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
-        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Work Experience</h2>
-        <Button type="button" variant="outline" size="sm" onClick={handleAddExperience}>
+        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Education</h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddEducation}>
           <PlusCircle className="w-4 h-4 mr-2" />
-          Add Experience
+          Add Education
         </Button>
       </div>
 
@@ -174,115 +172,78 @@ const ExperienceSection: React.FC = () => {
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => handleRemoveExperience(index)}
+                onClick={() => handleRemoveEducation(index)}
                 className="absolute top-3 right-3 text-red-400 hover:text-destructive hover:bg-destructive/10 w-8 h-8"
-                aria-label="Remove experience entry"
+                aria-label="Remove education entry"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
-
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
-                  <Label htmlFor={`experience.${index}.company`}>Company Name</Label>
-                  <Input id={`experience.${index}.company`} {...register(`experience.${index}.company`)} placeholder="e.g., Tech Solutions Inc." />
-                  {errors.experience?.[index]?.company && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.company?.message}</p>}
+                  <Label htmlFor={`education.${index}.institution`}>Institution Name</Label>
+                  <Input id={`education.${index}.institution`} {...register(`education.${index}.institution`)} placeholder="e.g., University of Example" />
+                  {errors.education?.[index]?.institution && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.institution?.message}</p>}
                 </div>
                 <div>
-                  <Label htmlFor={`experience.${index}.position`}>Position / Title</Label>
-                  <Input id={`experience.${index}.position`} {...register(`experience.${index}.position`)} placeholder="e.g., Software Engineer" />
-                  {errors.experience?.[index]?.position && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.position?.message}</p>}
+                  <Label htmlFor={`education.${index}.degree`}>Degree</Label>
+                  <Input id={`education.${index}.degree`} {...register(`education.${index}.degree`)} placeholder="e.g., Bachelor of Science" />
+                  {errors.education?.[index]?.degree && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.degree?.message}</p>}
                 </div>
               </div>
 
+              <div>
+                <Label htmlFor={`education.${index}.field`}>Field of Study / Major</Label>
+                <Input id={`education.${index}.field`} {...register(`education.${index}.field`)} placeholder="e.g., Computer Science" />
+                {errors.education?.[index]?.field && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.field?.message}</p>}
+              </div>
+              
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
-                  <Label htmlFor={`experience.${index}.startDate`}>Start Date</Label>
+                  <Label htmlFor={`education.${index}.startDate`}>Start Date</Label>
                   <div className="relative">
-                    <Input id={`experience.${index}.startDate`} {...register(`experience.${index}.startDate`)} placeholder="YYYY-MM" className="pr-10" />
+                    <Input id={`education.${index}.startDate`} {...register(`education.${index}.startDate`)} placeholder="YYYY or YYYY-MM" className="pr-10" />
                     <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
                   </div>
-                  {errors.experience?.[index]?.startDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.startDate?.message}</p>}
+                  {errors.education?.[index]?.startDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.startDate?.message}</p>}
                 </div>
                 <div>
-                  <Label htmlFor={`experience.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
+                  <Label htmlFor={`education.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
                   <div className="relative">
-                    <Input id={`experience.${index}.endDate`} {...register(`experience.${index}.endDate`)} placeholder="YYYY-MM or Present" className="pr-10" />
+                    <Input id={`education.${index}.endDate`} {...register(`education.${index}.endDate`)} placeholder="YYYY, YYYY-MM or Present" className="pr-10" />
                     <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
                   </div>
-                  {errors.experience?.[index]?.endDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.endDate?.message}</p>}
+                  {errors.education?.[index]?.endDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.endDate?.message}</p>}
                 </div>
               </div>
 
               <div>
-                <Label htmlFor={`experience.${index}.targetCompanyValues`}>
-                    Target Company Keywords/Values (Optional)
-                </Label>
-                <div className="relative">
-                    <Input
-                        id={`experience.${index}.targetCompanyValues`}
-                        {...register(`experience.${index}.targetCompanyValues`)}
-                        placeholder="e.g., innovation, customer-centric, agile"
-                        className="pl-10" // Make space for icon
-                    />
-                    <Target className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                </div>
-                <p className={cn("text-xs text-gray-400 mt-1", appTheme.textMuted)}>
-                    Comma-separated keywords. AI will use these to tailor enhancement.
-                </p>
+                <Label htmlFor={`education.${index}.gpa`}>GPA (Optional)</Label>
+                <Input id={`education.${index}.gpa`} {...register(`education.${index}.gpa`)} placeholder="e.g., 3.8/4.0" />
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                    <Label htmlFor={`experience.${index}.description`}>Key Responsibilities & Description</Label>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAiEnhance(index)}
-                        disabled={enhancingIndex === index}
-                        className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)}
-                    >
-                        {enhancingIndex === index ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                        ) : (
-                            <Sparkles className="w-3.5 h-3.5 mr-1" />
-                        )}
-                        AI Enhance Description & Achievements
-                    </Button>
-                </div>
+                <Label htmlFor={`education.${index}.achievements`}>Key Achievements/Coursework (Optional - one per line)</Label>
                 <Textarea
-                  id={`experience.${index}.description`}
-                  {...register(`experience.${index}.description`)}
-                  rows={4}
-                  placeholder="Describe your role, responsibilities, and key contributions. Start sentences with action verbs for impact."
-                />
-                {errors.experience?.[index]?.description && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.description?.message}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor={`experience.${index}.achievements`}>Quantifiable Achievements (Optional - one per line)</Label>
-                <Textarea
-                  id={`experience.${index}.achievements`}
-                  {...register(`experience.${index}.achievements`)}
+                  id={`education.${index}.achievements`}
+                  {...register(`education.${index}.achievements`)}
                   rows={3}
-                  placeholder="e.g., Increased sales by 15% in Q3 by implementing X strategy."
+                  placeholder="e.g., Dean's List, Relevant projects, Thesis title"
                 />
-                <p className={cn("text-xs mt-2", appTheme.textMuted)}>
-                  AI can help generate or refine these based on your description above. Focus on impact and numbers.
-                </p>
+                <p className={cn("text-xs mt-2", appTheme.textMuted)}>List key accomplishments or relevant coursework. Each on a new line for bullet points in the resume.</p>
               </div>
             </div>
           ))}
         </div>
       ) : (
-         <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
+        <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
           <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
-          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No work experience added yet.</p>
-          <p className={cn("text-sm", appTheme.textMuted)}>Showcase your professional journey by adding your roles.</p>
+          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No education entries added yet.</p>
+          <p className={cn("text-sm", appTheme.textMuted)}>Click &quot;Add Education&quot; to start building your academic history.</p>
         </div>
       )}
     </form>
   );
 };
 
-export default ExperienceSection;
+export default EducationSection;
