@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { PersonalInfo } from '@/types/resume';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Loader2, MailCheck } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { cn } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
@@ -169,7 +169,7 @@ const PersonalInfoSection: React.FC = () => {
                 {isEnhancingSummary ? (
                     <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
                 ) : (
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
+                    <MailCheck className="w-3.5 h-3.5 mr-1" />
                 )}
                 AI Enhance
             </Button>

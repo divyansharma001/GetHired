@@ -8,7 +8,8 @@ import {
     ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, 
     Sparkles, TrendingUp, Zap, Target, FileText as FileTextIconLucide,
     LogIn, Edit2, DownloadCloud, BarChart2, ListChecks, ShieldCheck, Briefcase, // New icons for features
-    Github, Linkedin, Twitter as TwitterIcon // Icons for Footer
+    Github, Linkedin, Twitter as TwitterIcon, // Icons for Footer
+    MailCheckIcon
 } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import SlidingCompanies from './sliding-company';
@@ -532,7 +533,7 @@ const LandingPageContent = () => {
             <div className="col-span-full lg:col-span-3 mb-6 lg:mb-0">
               <Link href="/" className="flex items-center space-x-2 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Sparkles className="w-5 h-5 text-white" />
+                  <MailCheckIcon className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
                   GetHired

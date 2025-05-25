@@ -5,8 +5,9 @@ import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
-    Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, Sparkles, 
-    Download as DownloadIcon, Mail, Copy 
+    Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, 
+    Download as DownloadIcon, Mail, Copy, 
+    Sparkles
 } from 'lucide-react';
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';

@@ -5,8 +5,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { UserButton } from '@clerk/nextjs';
 import { 
-    Plus, FileText, Download, Calendar, Star, Sparkles, Sun, Moon, 
-    Briefcase, BarChart3, DownloadCloud, Loader2, Trash2, Edit3, AlertTriangle 
+    Plus, FileText, Download, Calendar, Star, Sun, Moon, 
+    Briefcase, BarChart3, DownloadCloud, Loader2, Trash2, Edit3, AlertTriangle, 
+    MailCheck
 } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { useResumeStore } from '@/hooks/use-resume';
@@ -151,7 +152,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
                 <div className="flex items-center justify-between">
                     <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
                         <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-                            <Sparkles className="w-4 h-4 text-white" />
+                            <MailCheck className="w-4 h-4 text-white" />
                         </div>
                         <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
                         <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
@@ -181,7 +182,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
                     <div className="flex items-center justify-between">
                         <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
                             <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-                                <Sparkles className="w-4 h-4 text-white" />
+                                <MailCheck className="w-4 h-4 text-white" />
                             </div>
                             <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
                              <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
@@ -213,7 +214,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
           <div className="flex items-center justify-between">
             <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
               <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-                <Sparkles className="w-4 h-4 text-white" />
+                <MailCheck className="w-4 h-4 text-white" />
               </div>
               <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
                <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
