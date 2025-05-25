@@ -9,8 +9,8 @@ import { ThemeProvider } from '@/context/theme-provider';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ResumeAI Pro - AI-Powered Resume Builder',
-  description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with ResumeAI Pro.',
+  title: 'GetHired - AI-Powered Resume Builder',
+  description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with GetHired.',
 }
 
 export default function RootLayout({

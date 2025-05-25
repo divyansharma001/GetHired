@@ -1957,8 +1957,8 @@ import { ThemeProvider } from '@/context/theme-provider';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'ResumeAI Pro - AI-Powered Resume Builder',
-  description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with ResumeAI Pro.',
+  title: 'GetHired - AI-Powered Resume Builder',
+  description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with GetHired.',
 }
 
 export default function RootLayout({
@@ -3371,7 +3371,7 @@ const LandingPageContent = () => {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-            ResumeAI Pro
+            GetHired
           </span>
         </Link>
         
@@ -3700,7 +3700,7 @@ const LandingPageContent = () => {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-                ResumeAI Pro
+                GetHired
               </span>
             </Link>
             <div className="flex flex-wrap justify-center space-x-8"> {/* Added flex-wrap and justify-center */}
@@ -3712,7 +3712,7 @@ const LandingPageContent = () => {
             </div>
           </div>
           <div className={`border-t ${themeClasses.border} pt-8 text-center ${themeClasses.textMuted2}`}>
-            <p>© 2024 ResumeAI Pro. All rights reserved. Built with cutting-edge AI technology.</p>
+            <p>© 2024 GetHired. All rights reserved. Built with cutting-edge AI technology.</p>
           </div>
         </div>
       </footer>
@@ -4567,7 +4567,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
     return (
       <div className={`min-h-screen ${themeClasses.bg} flex flex-col`}>
         <header className={`${themeClasses.bgAlt} ${themeClasses.border} border-b shadow-sm sticky top-0 z-40`}> {/* Header */}
-            <div className="max-w-full mx-auto px-6 py-3.5"><div className="flex items-center justify-between"><Link href="/dashboard" className="flex items-center space-x-3"><div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><Sparkles className="w-4 h-4 text-white" /></div><span className={`text-xl font-bold ${themeClasses.text} hidden sm:inline`}>ResumeAI Pro</span><span className={`text-xl font-normal ${themeClasses.textMuted2} hidden md:inline`}>/ Dashboard</span></Link><div className="flex items-center space-x-4"><button onClick={toggleTheme} className={`p-2 rounded-lg ${themeClasses.textMuted} hover:${themeClasses.text} ${themeClasses.buttonGhost} transition-colors`} aria-label="Toggle theme">{isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button><UserButton appearance={{elements: {avatarBox: "w-9 h-9 shadow-md", userButtonPopoverCard: `${themeClasses.cardBg} ${themeClasses.border} border`}}}/></div></div></div>
+            <div className="max-w-full mx-auto px-6 py-3.5"><div className="flex items-center justify-between"><Link href="/dashboard" className="flex items-center space-x-3"><div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><Sparkles className="w-4 h-4 text-white" /></div><span className={`text-xl font-bold ${themeClasses.text} hidden sm:inline`}>GetHired</span><span className={`text-xl font-normal ${themeClasses.textMuted2} hidden md:inline`}>/ Dashboard</span></Link><div className="flex items-center space-x-4"><button onClick={toggleTheme} className={`p-2 rounded-lg ${themeClasses.textMuted} hover:${themeClasses.text} ${themeClasses.buttonGhost} transition-colors`} aria-label="Toggle theme">{isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button><UserButton appearance={{elements: {avatarBox: "w-9 h-9 shadow-md", userButtonPopoverCard: `${themeClasses.cardBg} ${themeClasses.border} border`}}}/></div></div></div>
         </header>
         <div className="flex-grow flex items-center justify-center">
           <Loader2 className={`w-12 h-12 ${themeClasses.text} animate-spin`} />
@@ -4579,7 +4579,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
     return (
         <div className={`min-h-screen ${themeClasses.bg} flex flex-col`}>
             <header className={`${themeClasses.bgAlt} ${themeClasses.border} border-b shadow-sm sticky top-0 z-40`}> {/* Header */}
-                <div className="max-w-full mx-auto px-6 py-3.5"><div className="flex items-center justify-between"><Link href="/dashboard" className="flex items-center space-x-3"><div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><Sparkles className="w-4 h-4 text-white" /></div><span className={`text-xl font-bold ${themeClasses.text} hidden sm:inline`}>ResumeAI Pro</span><span className={`text-xl font-normal ${themeClasses.textMuted2} hidden md:inline`}>/ Dashboard</span></Link><div className="flex items-center space-x-4"><button onClick={toggleTheme} className={`p-2 rounded-lg ${themeClasses.textMuted} hover:${themeClasses.text} ${themeClasses.buttonGhost} transition-colors`} aria-label="Toggle theme">{isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button><UserButton appearance={{elements: {avatarBox: "w-9 h-9 shadow-md", userButtonPopoverCard: `${themeClasses.cardBg} ${themeClasses.border} border`}}}/></div></div></div>
+                <div className="max-w-full mx-auto px-6 py-3.5"><div className="flex items-center justify-between"><Link href="/dashboard" className="flex items-center space-x-3"><div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md"><Sparkles className="w-4 h-4 text-white" /></div><span className={`text-xl font-bold ${themeClasses.text} hidden sm:inline`}>GetHired</span><span className={`text-xl font-normal ${themeClasses.textMuted2} hidden md:inline`}>/ Dashboard</span></Link><div className="flex items-center space-x-4"><button onClick={toggleTheme} className={`p-2 rounded-lg ${themeClasses.textMuted} hover:${themeClasses.text} ${themeClasses.buttonGhost} transition-colors`} aria-label="Toggle theme">{isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}</button><UserButton appearance={{elements: {avatarBox: "w-9 h-9 shadow-md", userButtonPopoverCard: `${themeClasses.cardBg} ${themeClasses.border} border`}}}/></div></div></div>
             </header>
             <div className="flex-grow flex flex-col items-center justify-center text-center px-4">
                 <AlertTriangle className={`w-16 h-16 ${isDark ? 'text-red-400' : 'text-red-500'} mb-4`} />
@@ -4601,7 +4601,7 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
               <div className="w-9 h-9 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
-              <span className={`text-xl font-bold ${themeClasses.text} hidden sm:inline`}>ResumeAI Pro</span>
+              <span className={`text-xl font-bold ${themeClasses.text} hidden sm:inline`}>GetHired</span>
                <span className={`text-xl font-normal ${themeClasses.textMuted2} hidden md:inline`}>/ Dashboard</span>
             </Link>
             <div className="flex items-center space-x-4">

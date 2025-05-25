@@ -1,9 +1,9 @@
 ````markdown
-# ResumeAI Pro
+# GetHired
 
 **AI-Powered, ATS-Optimized Resume Builder**
 
-ResumeAI Pro combines the latest in AI with professional templates and real-time feedback to help you craft resumes that get noticed.
+GetHired combines the latest in AI with professional templates and real-time feedback to help you craft resumes that get noticed.
 
 ---
 

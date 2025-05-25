@@ -45,7 +45,7 @@ const LandingPageContent = () => {
             <Sparkles className="w-5 h-5 text-white" />
           </div>
           <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-            ResumeAI Pro
+            GetHired
           </span>
         </Link>
         
@@ -374,7 +374,7 @@ const LandingPageContent = () => {
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-                ResumeAI Pro
+                GetHired
               </span>
             </Link>
             <div className="flex flex-wrap justify-center space-x-8"> {/* Added flex-wrap and justify-center */}
@@ -386,7 +386,7 @@ const LandingPageContent = () => {
             </div>
           </div>
           <div className={`border-t ${themeClasses.border} pt-8 text-center ${themeClasses.textMuted2}`}>
-            <p>© 2024 ResumeAI Pro. All rights reserved. Built with cutting-edge AI technology.</p>
+            <p>© 2024 GetHired. All rights reserved. Built with cutting-edge AI technology.</p>
           </div>
         </div>
       </footer>
