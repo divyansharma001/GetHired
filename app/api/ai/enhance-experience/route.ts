@@ -11,13 +11,20 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { description, achievements, title, jobTitle } = body;
+    const { description, achievements, title, jobTitle, targetCompanyValues } = body; // <<< Destructure targetCompanyValues
 
     if (!description) {
       return new NextResponse('Experience description is required', { status: 400 });
     }
 
-    const enhancedData = await enhanceExperienceEntry({ description, achievements, title, jobTitle });
+    // Pass targetCompanyValues to the enhancer function
+    const enhancedData = await enhanceExperienceEntry({
+        description,
+        achievements,
+        title,
+        jobTitle,
+        targetCompanyValues // <<< Pass here
+    });
     return NextResponse.json(enhancedData);
 
   } catch (error) {

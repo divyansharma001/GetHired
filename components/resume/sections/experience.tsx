@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-// components/resume/sections/experience.tsx
 'use client';
 import React, { useEffect, useState } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
@@ -12,7 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { ExperienceEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Sparkles, CalendarDays } from 'lucide-react';
+import { PlusCircle, Trash2, Sparkles, CalendarDays, Target } from 'lucide-react'; // Added Target icon
 
 const experienceEntrySchema = z.object({
   id: z.string(),
@@ -21,8 +20,8 @@ const experienceEntrySchema = z.object({
   startDate: z.string().min(4, "Start date is required"),
   endDate: z.string().min(4, "End date is required (or Present)"),
   description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long."),
-  // enhancedDescription: z.string().optional(), // AI will handle this
   achievements: z.string().optional(), // Storing as single string for textarea
+  targetCompanyValues: z.string().optional(), // <<< NEW FIELD
 });
 
 const experienceSchema = z.object({
@@ -33,12 +32,12 @@ type ExperienceFormData = z.infer<typeof experienceSchema>;
 
 const ExperienceSection: React.FC = () => {
   const { experience, updateExperience: updateStoreExperience, addExperience: addStoreExperience, removeExperience: removeStoreExperience } = useResumeStore();
-   const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
+  const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
   const resumeTitle = useResumeStore(state => state.title);
 
   const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ExperienceFormData>({
     resolver: zodResolver(experienceSchema),
-    defaultValues: { experience: experience.map(exp => ({ ...exp, achievements: exp.achievements?.join('\n') })) },
+    defaultValues: { experience: experience.map(exp => ({ ...exp, achievements: exp.achievements?.join('\n'), targetCompanyValues: exp.targetCompanyValues || '' })) }, // Added targetCompanyValues
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -52,6 +51,7 @@ const ExperienceSection: React.FC = () => {
         value.experience.forEach((expData, index) => {
           if (expData) {
             const achievementsArray = expData.achievements?.split('\n').filter(ach => ach.trim() !== '');
+            // Also ensure targetCompanyValues is passed to the store if needed, or handle directly from RHF
             updateStoreExperience(index, { ...expData, achievements: achievementsArray });
           }
         });
@@ -61,20 +61,18 @@ const ExperienceSection: React.FC = () => {
   }, [watch, updateStoreExperience]);
 
   const handleAddExperience = () => {
-    addStoreExperience();
-    append({ 
-      id: `temp-${Date.now()}`, 
-      company: '', 
-      position: '', 
-      startDate: '', 
-      endDate: '', 
+    const newId = addStoreExperience(); // Get the ID from the store action
+    append({
+      id: newId, // Use the ID from the store
+      company: '',
+      position: '',
+      startDate: '',
+      endDate: '',
       description: '',
-      achievements: ''
+      achievements: '',
+      targetCompanyValues: '' // <<< NEW FIELD
     });
   };
-  
-
-  
 
   const handleRemoveExperience = (index: number) => {
     const expIdToRemove = fields[index].id;
@@ -82,14 +80,14 @@ const ExperienceSection: React.FC = () => {
     remove(index);
   };
 
- const handleAiEnhance = async (index: number) => {
+  const handleAiEnhance = async (index: number) => {
     setEnhancingIndex(index);
-    const currentEntry = watch(`experience.${index}`); // Get full current entry from RHF
+    const currentEntry = watch(`experience.${index}`);
 
     if (!currentEntry || !currentEntry.description) {
-        alert("Please provide a description for the experience entry first.");
-        setEnhancingIndex(null);
-        return;
+      alert("Please provide a description for the experience entry first.");
+      setEnhancingIndex(null);
+      return;
     }
 
     try {
@@ -98,9 +96,10 @@ const ExperienceSection: React.FC = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           description: currentEntry.description,
-          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''), // Send as array
+          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''),
           title: resumeTitle,
-          // jobTitle: "Target Software Engineer" // Optionally get this from user input later
+          jobTitle: currentEntry.position, // Using current position as jobTitle for context
+          targetCompanyValues: currentEntry.targetCompanyValues || '', // <<< PASS NEW FIELD
         }),
       });
 
@@ -112,9 +111,6 @@ const ExperienceSection: React.FC = () => {
       const enhancedData = await response.json();
 
       setValue(`experience.${index}.description`, enhancedData.enhancedDescription, { shouldDirty: true, shouldValidate: true });
-      // For achievements, you might want a more sophisticated UI to merge/select them.
-      // For now, let's append them or offer to replace.
-      // Option 1: Replace achievements textarea content
       setValue(`experience.${index}.achievements`, enhancedData.suggestedAchievements.join('\n'), { shouldDirty: true, shouldValidate: true });
       alert("Experience enhanced! Review the changes and the suggested achievements.");
 
@@ -125,8 +121,6 @@ const ExperienceSection: React.FC = () => {
       setEnhancingIndex(null);
     }
   };
-
-
 
   return (
     <form className="space-y-8">
@@ -149,7 +143,7 @@ const ExperienceSection: React.FC = () => {
           >
             <Trash2 className="w-4 h-4" />
           </Button>
-          
+
           <input type="hidden" {...register(`experience.${index}.id`)} />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -164,7 +158,7 @@ const ExperienceSection: React.FC = () => {
               {errors.experience?.[index]?.position && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.position?.message}</p>}
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <Label htmlFor={`experience.${index}.startDate`}>Start Date</Label>
@@ -184,12 +178,43 @@ const ExperienceSection: React.FC = () => {
             </div>
           </div>
 
+          {/* Target Company Values Input */}
+          <div>
+            <Label htmlFor={`experience.${index}.targetCompanyValues`}>
+                Target Company Keywords/Values (Optional)
+            </Label>
+            <div className="relative">
+                <Input
+                    id={`experience.${index}.targetCompanyValues`}
+                    {...register(`experience.${index}.targetCompanyValues`)}
+                    placeholder="e.g., innovation, customer-centric, agile, specific tech stack"
+                    className="pl-10"
+                />
+                <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+                Provide comma-separated keywords or values important to the company you&apos;re targeting with this experience.
+            </p>
+          </div>
+
+
           <div>
             <div className="flex justify-between items-center mb-1.5">
-                <Label htmlFor={`experience.${index}.description`}>Key Responsibilities & Achievements</Label>
-                <Button type="button" variant="ghost" size="sm" onClick={() => handleAiEnhance(index)} className="text-purple-400 hover:text-purple-300 text-xs p-1">
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
-                    AI Enhance
+                <Label htmlFor={`experience.${index}.description`}>Key Responsibilities</Label>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAiEnhance(index)}
+                    disabled={enhancingIndex === index} // Disable button while enhancing this specific entry
+                    className="text-purple-400 hover:text-purple-300 text-xs p-1"
+                  >
+                    {enhancingIndex === index ? (
+                        <Sparkles className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                        <Sparkles className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    AI Enhance Description & Achievements
                 </Button>
             </div>
             <Textarea
@@ -199,7 +224,6 @@ const ExperienceSection: React.FC = () => {
               placeholder="Describe your role and key contributions. Start sentences with action verbs."
             />
             {errors.experience?.[index]?.description && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.description?.message}</p>}
-            <p className="text-xs text-gray-400 mt-1">Use bullet points for achievements if preferred (AI can help format this later).</p>
           </div>
 
           <div>
@@ -210,7 +234,7 @@ const ExperienceSection: React.FC = () => {
               rows={3}
               placeholder="e.g., Increased sales by 15% in Q3., Led a team of 5 developers."
             />
-             <p className="text-xs text-gray-400 mt-1">Focus on measurable results. AI can help phrase these later.</p>
+             <p className="text-xs text-gray-400 mt-1">The AI can help generate or refine these based on your description above.</p>
           </div>
         </div>
       ))}

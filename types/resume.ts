@@ -21,7 +21,6 @@ export interface EducationEntry {
   gpa?: string;
   achievements?: string[]; // List of achievements/bullet points
 }
-
 export interface ExperienceEntry {
   id: string; // UUID
   company: string;
@@ -31,6 +30,7 @@ export interface ExperienceEntry {
   description: string; // User's raw input
   enhancedDescription?: string; // AI-enhanced version
   achievements: string[]; // Bullet points, can also be AI-enhanced
+  targetCompanyValues?: string; // <<< ADDED for storing in Zustand/DB if needed
 }
 
 export interface SkillEntry {

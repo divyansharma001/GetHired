@@ -69,8 +69,8 @@ model ExperienceEntry {
   endDate             String
   description         String    @db.Text
   enhancedDescription String?   @db.Text
-  achievements        String[]  @default([]) // Array of strings for bullet points
-
+  achievements        String[]  @default([])
+  targetCompanyValues String?   // <<< ADDED FIELD
   resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
   resumeId String
 
