@@ -6,7 +6,7 @@ const config: Config = {
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx}',
+    './src/**/*.{ts,tsx}', // Ensure this covers all your component locations
   ],
   theme: {
     container: {
@@ -18,15 +18,25 @@ const config: Config = {
     },
     extend: {
       colors: {
+        // Theme-aware semantic colors using CSS variables
         border: "hsl(var(--border))",
-        input: "hsl(var(--input))",
-        ring: "hsl(var(--ring))",
+        input: "hsl(var(--input))", // For input borders specifically
+        ring: "hsl(var(--ring))", // For focus rings
+
+        // Inside theme.extend.colors in tailwind.config.ts
+inputField: { // Renamed from just "input" to avoid conflict with the existing "input" for border
+  DEFAULT: "hsl(var(--input-bg))",      // For background of input
+  border: "hsl(var(--input-border))", // Specific border for input field
+  foreground: "hsl(var(--foreground))", // Text color within input
+},
+
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+
         primary: {
-          // DEFAULT: "hsl(var(--primary))", // We'll use gradient for buttons
-          DEFAULT: "transparent", // Placeholder, primary buttons will be gradients
-          foreground: "hsl(var(--primary-text))", 
+          // DEFAULT: "hsl(var(--primary-gradient-start))", // Or make it transparent if always using gradient
+          DEFAULT: "hsl(var(--primary-gradient-end))", // Using the end color as a default solid
+          foreground: "hsl(var(--primary-text))", // Text on primary elements
         },
         secondary: {
           DEFAULT: "hsl(var(--muted))", // Using muted for secondary bg
@@ -52,22 +62,27 @@ const config: Config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        // Direct colors from your new landing page for gradients/specifics
-        'theme-blue-600': '#2563EB',
-        'theme-purple-600': '#7C3AED',
-        'theme-blue-400': '#60A5FA',
-        'theme-purple-400': '#A78BFA',
-        'theme-pink-400': '#F472B6', // From landing page text gradient
+
+        // Retain specific theme colors if absolutely needed for non-semantic direct use,
+        // but prefer using the semantic names above.
+        // 'theme-blue-600': '#2563EB', // This is now var(--primary-gradient-start) conceptually
+        // 'theme-purple-600': '#7C3AED',// This is now var(--primary-gradient-end) conceptually
+        // 'theme-blue-400': '#60A5FA',
+        // 'theme-purple-400': '#A78BFA',
+        // 'theme-pink-400': '#F472B6',
       },
       borderRadius: {
-        lg: "var(--radius)", // 0.75rem
-        md: "calc(var(--radius) - 2px)", // 0.625rem
-        sm: "calc(var(--radius) - 4px)", // 0.5rem
-        xl: "calc(var(--radius) + 4px)", // 1rem (as seen in landing page buttons)
-        '2xl': "calc(var(--radius) + 8px)", // 1.25rem
-        '3xl': "calc(var(--radius) + 16px)", // 1.75rem (as seen in landing page sections)
+        // Your existing radius setup is good.
+        // It correctly uses a CSS variable for the base radius.
+        lg: "var(--radius)", // e.g., 0.75rem
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+        xl: "calc(var(--radius) + 4px)",
+        '2xl': "calc(var(--radius) + 8px)",
+        '3xl': "calc(var(--radius) + 16px)",
       },
       backgroundImage: {
+        // Define the primary gradient using the CSS variables
         'primary-gradient': 'linear-gradient(to right, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)))',
       },
       keyframes: {
@@ -79,10 +94,14 @@ const config: Config = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // You can add other global keyframes from landing page here if they are widely used
+        // Example:
+        // "gradient-x": { /* ... from landing page style jsx block ... */ },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        // "gradient-x": "gradient-x 3s ease infinite", // if keyframe added above
       },
     },
   },

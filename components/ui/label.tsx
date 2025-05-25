@@ -1,3 +1,4 @@
+// components/ui/label.tsx
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
@@ -8,7 +9,12 @@ const Label = React.forwardRef<HTMLLabelElement, LabelProps>(
     <label
       ref={ref}
       className={cn(
-        "block text-sm font-medium text-gray-300 mb-1.5",
+        "block text-sm font-medium mb-1.5", // Base styling
+        "text-foreground/90", // Use foreground color with slight opacity for subtlety
+        // Alternatively, for a more distinct label color:
+        // "text-muted-foreground",
+        // Or if you define a specific label text color in your theme:
+        // "text-label",
         className
       )}
       {...props}

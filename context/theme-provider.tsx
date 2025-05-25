@@ -13,7 +13,7 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>("dark"); // Default to dark as per your new LP
+  const [theme, setTheme] = useState<Theme>("dark"); // Default to dark
 
   useEffect(() => {
     const storedTheme = localStorage.getItem("theme") as Theme | null;
@@ -26,14 +26,15 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const initialTheme = prefersDark ? "dark" : "light";
       setTheme(initialTheme);
       document.documentElement.classList.toggle("dark", initialTheme === "dark");
-      localStorage.setItem("theme", initialTheme);
+      // No need to localStorage.setItem("theme", initialTheme) here,
+      // as it implies the user hasn't made a choice yet. Only store on explicit toggle.
     }
-  }, []);
+  }, []); // Empty dependency array: runs once on mount
 
   const toggleTheme = () => {
     setTheme((prevTheme) => {
       const newTheme = prevTheme === "light" ? "dark" : "light";
-      localStorage.setItem("theme", newTheme);
+      localStorage.setItem("theme", newTheme); // Store user's explicit choice
       document.documentElement.classList.toggle("dark", newTheme === "dark");
       return newTheme;
     });

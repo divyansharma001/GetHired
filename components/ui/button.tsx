@@ -8,18 +8,25 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-gradient-to-r from-purple-500 to-pink-500 text-primary-foreground hover:from-purple-600 hover:to-pink-600",
-        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: // Uses the primary gradient defined in tailwind.config.ts
+          "bg-primary-gradient text-primary-foreground hover:opacity-90 shadow-md hover:shadow-lg transform transition-all duration-200 hover:-translate-y-px",
+        destructive:
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
+        outline:
+          "border border-input bg-transparent hover:bg-accent hover:text-accent-foreground text-accent-foreground shadow-sm",
+          // bg-transparent ensures it takes the page background. Text is accent color.
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-secondary/80 shadow-sm",
+        ghost:
+          "text-accent-foreground hover:bg-accent hover:text-accent-foreground/90",
+          // Text is accent, hover has a subtle background.
+        link: "text-primary hover:text-primary/80 underline underline-offset-4",
       },
       size: {
         default: "h-10 px-4 py-2",
         sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
+        lg: "h-11 rounded-md px-8", // Good for primary CTAs
+        icon: "h-10 w-10", // Ensure icons inside have appropriate size and padding
       },
     },
     defaultVariants: {

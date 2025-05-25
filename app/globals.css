@@ -4,11 +4,15 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%; /* Light theme background (white) */
-    --foreground: 224 71.4% 4.1%; /* Light theme text (near black) */
+    /* Light Theme Variables (Clean & Professional) */
+    --background: 0 0% 100%; /* White */
+    --foreground: 224 71.4% 4.1%; /* Near Black */
 
-    --muted: 220 14.3% 95.9%; /* Light theme muted bg (light gray) */
-    --muted-foreground: 220 8.9% 46.1%; /* Light theme muted text */
+    --muted: 220 14.3% 95.9%; /* Light Gray (e.g., bg-slate-100) */
+    --muted-foreground: 220 8.9% 46.1%; /* Medium Gray Text */
+
+    --input-bg: 0 0% 100%; /* Light theme input background (white) */
+--input-border: 220 13% 85%; /* Slightly darker than main border for light theme inputs */
 
     --popover: 0 0% 100%;
     --popover-foreground: 224 71.4% 4.1%;
@@ -16,89 +20,127 @@
     --card: 0 0% 100%;
     --card-foreground: 224 71.4% 4.1%;
 
-    --border: 220 13% 91%; /* Light theme border (gray-200) */
-    --input: 220 13% 91%; /* Light theme input border */
+    --border: 220 13% 91%; /* Light Gray Border (e.g., border-slate-200/300) */
+    --input: 220 13% 91%; /* Input border */
 
-    --primary-gradient-start: 217 91% 60%; /* blue-600 */
-    --primary-gradient-end: 262 83% 58%; /* purple-600 */
+    /* Primary Accent Gradient (e.g., blue-600 to purple-600 from dashboard) */
+    --primary-gradient-start: 217 91% 60%; /* hsl for blue-600 */
+    --primary-gradient-end: 262 83% 58%;   /* hsl for purple-600 */
     
-    --primary-text: 0 0% 100%; /* Text on primary gradient buttons */
+    --primary-text: 0 0% 100%; /* Text on primary gradient elements (White) */
 
-    --accent: 220 14.3% 95.9%; /* Light theme accent (e.g., hover) */
+    --accent: 220 14.3% 95.9%; /* Accent color for hover states, etc. */
     --accent-foreground: 224 71.4% 4.1%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%; /* Red for destructive actions */
+    --destructive-foreground: 0 0% 98%; /* Light text on destructive red */
 
-    --ring: 224 71.4% 4.1%;
-    --radius: 0.75rem; /* Keep your existing radius */
+    --ring: 224 71.4% 4.1%; /* Focus ring color */
+    --radius: 0.75rem; /* Base border radius */
   }
 
   .dark {
-    --background: 222.2 84% 4.9%; /* Dark theme background (gray-900) */
-    --foreground: 210 20% 98%; /* Dark theme text (near white) */
+    /* Dark Theme Variables (Deep, Modern, Professional) */
+    --background: 220 20% 7%; /* Very Dark Neutral (similar to neutral-950) */
+    --foreground: 210 20% 98%; /* Near White Text */
+    --input-bg: 220 15% 18%; /* Dark theme input background (e.g., neutral-800ish) */
+--input-border: 215 15% 35%; /* Slightly lighter than main dark border */
 
-    --muted: 215 27.9% 16.9%; /* Dark theme muted bg (gray-800) */
-    --muted-foreground: 217.9 10.6% 64.9%; /* Dark theme muted text (gray-300/400) */
+    --muted: 220 15% 12%; /* Dark Muted BG (similar to neutral-900) */
+    --muted-foreground: 215 15% 65%; /* Muted Gray Text (similar to neutral-400) */
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 220 20% 7%;
     --popover-foreground: 210 20% 98%;
 
-    --card: 215 27.9% 16.9%; /* Dark theme card bg (gray-800/50) - adjust if using transparency */
-    /* For bg-gray-800/50, you might need to apply opacity directly or use a solid color */
-    /* Using a solid near equivalent for now */
-    /* --card: 222.2 47.4% 11.2%; /* slate-800 */
-
-
+    /* Card background base (components can add opacity/blur) */
+    --card: 220 15% 12%; /* Same as muted for consistency, or slightly lighter like neutral-800 base */
+    /* Example: --card: 220 15% 15%; /* Slightly lighter than page muted */
     --card-foreground: 210 20% 98%;
 
-    --border: 215 20.2% 25.1%; /* Dark theme border (gray-700) */
-    --input: 215 20.2% 25.1%; /* Dark theme input border */
+    --border: 215 15% 25%; /* Dark Border (similar to neutral-700/800) */
+    --input: 215 15% 25%; /* Input border */
     
-    /* Primary gradient is often the same, text on it might differ if needed */
-    /* --primary-gradient-start: 217 91% 60%; */
-    /* --primary-gradient-end: 262 83% 58%; */
+    /* Primary Accent Gradient can remain the same or be adjusted for dark mode if desired */
+    /* --primary-gradient-start: 217 91% 60%; (blue-600) */
+    /* --primary-gradient-end: 262 83% 58%; (purple-600) */
     /* --primary-text: 0 0% 100%; */
 
-    --accent: 215 27.9% 16.9%; /* Dark theme accent */
+    --accent: 220 15% 18%; /* Dark Accent (e.g., hover for secondary items) */
     --accent-foreground: 210 20% 98%;
 
-    /* Destructive etc. can be kept or adjusted */
+    /* Destructive colors can often remain the same */
+    /* --destructive: 0 84.2% 60.2%; */
+    /* --destructive-foreground: 0 0% 98%; */
+
+    --ring: 262 83% 58%; /* Purple focus ring for dark mode to match accent */
   }
 }
 
 @layer base {
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    font-feature-settings: "rlig" 1, "calt" 1; /* Keep existing font features */
     min-height: 100vh;
+    /* Ensures smooth scrolling */
+    scroll-behavior: smooth; 
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Add focus-visible polyfill for older browsers if needed, or rely on Tailwind's focus-visible utilities */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
 }
 
-/* Custom Scrollbar (as before, check if it needs theme adjustments) */
+/* Custom Scrollbar Themed */
 .styled-scrollbar::-webkit-scrollbar {
-  width: 8px;
+  width: 10px; /* Slightly wider for better interaction */
+  height: 10px;
 }
 .styled-scrollbar::-webkit-scrollbar-track {
-  /* Consider theming this too */
-  background: hsl(var(--muted) / 0.5); 
+  background: hsl(var(--muted) / 0.3); /* Use muted background with some transparency */
   border-radius: 10px;
 }
 .styled-scrollbar::-webkit-scrollbar-thumb {
-  /* Use primary gradient colors */
-  background: linear-gradient(to bottom, hsl(var(--primary-gradient-start)), hsl(var(--primary-gradient-end)));
+  background: hsl(var(--muted-foreground) / 0.5); /* Muted foreground for thumb */
   border-radius: 10px;
+  border: 2px solid transparent; /* Creates padding around thumb */
+  background-clip: padding-box;
 }
 .styled-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(to bottom, hsl(var(--primary-gradient-start) / 0.8), hsl(var(--primary-gradient-end) / 0.8));
+  background: hsl(var(--muted-foreground) / 0.7);
 }
 
-/* Remove old gradient-border and animate-glow if not used by new landing page */
-.animate-glow {
-  /* animation: glow 2s ease-in-out infinite; */ /* If you still need it */
+/* Responsive scrollbar for smaller viewports if desired */
+@media (max-width: 768px) {
+  .styled-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 }
 
-@keyframes glow {
-  /* 0%, 100% { opacity: 1; } */
-  /* 50% { opacity: 0.5; } */
+/* Landing page specific animations are in landing-page.tsx style jsx block */
+/* These are global animations, if any are still needed */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+@keyframes gradient-x {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.animate-gradient-x {
+  background-size: 200% 200%;
+  animation: gradient-x 3s ease infinite;
+}
+
+/* Additional global styles if needed */
+html {
+  /* This helps if you have many fixed/sticky elements and want smooth scrolling */
+  scroll-padding-top: 80px; /* Adjust based on your sticky header height */
 }

@@ -1,65 +1,76 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
 // app/dashboard/create-resume/page.tsx
 'use client';
 
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, Sparkles } from 'lucide-react';
+import { 
+    Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, Sparkles, 
+    Download as DownloadIcon, Mail, Copy 
+} from 'lucide-react';
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';
 import ResumePreview from '@/components/resume/resume-preview';
 import { Button } from '@/components/ui/button';
-import { useResumeStore } from '@/hooks/use-resume'; // Keep for getState() if absolutely needed outside selectors
-import { useShallowResumeSelector, ShallowSelectedResumeParts } from '@/hooks/useShallowResumeSelector';
-import { ResumeData, EducationEntry, ExperienceEntry, ProjectEntry, SkillEntry, PersonalInfo } from '@/types/resume';
+import { useResumeStore } from '@/hooks/use-resume';
+import { useShallowResumeSelector } from '@/hooks/useShallowResumeSelector';
+import { ResumeData } from '@/types/resume';
 import { useTheme } from '@/context/theme-provider';
-import { Download } from 'lucide-react'; // Add Download icon
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import SimpleTemplate from '@/components/resume/templates/simple-template';
-import { Mail, Copy, Download as DownloadIcon } from 'lucide-react'
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card'; // Import Card components
+import { cn } from '@/lib/utils';
 
 const resumeSections = ['Personal Info', 'Education', 'Experience', 'Skills', 'Projects', 'Review'];
 const totalSteps = resumeSections.length;
 
-type ResumeApiPayload = Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'updatedAt'>;
+// Define AppTheme directly for this component
+function getAppTheme(isDark: boolean) {
+  return {
+    pageBg: isDark ? 'bg-neutral-950' : 'bg-slate-100', // Main app area bg
+    headerBg: isDark ? 'bg-neutral-900/80 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md',
+    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
+    textBody: isDark ? 'text-neutral-300' : 'text-neutral-700',
+    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    textPlaceholder: isDark ? 'text-neutral-500' : 'text-neutral-400',
+    borderPrimary: isDark ? 'border-neutral-700' : 'border-neutral-300',
+    borderSecondary: isDark ? 'border-neutral-800' : 'border-neutral-200/70',
+    // Card theming will come from the Card component itself
+    // Button theming will come from the Button component variants
+    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    buttonGhostText: isDark ? 'text-neutral-400 hover:text-neutral-100' : 'text-neutral-500 hover:text-neutral-900',
+    // Progress bar specific
+    progressBarBg: isDark ? 'bg-neutral-700' : 'bg-slate-200',
+    // Form container specific
+    formContainerBg: isDark ? 'bg-neutral-800/60 backdrop-blur-md' : 'bg-white/70 backdrop-blur-md',
+    formContainerBorder: isDark ? 'border-neutral-700/70' : 'border-neutral-200/80',
+  };
+}
+
 
 function CreateResumePageContent() {
   const { userId: clerkUserIdFromAuth, isLoaded: isAuthLoaded } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeIdFromParams = searchParams.get('resumeId');
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [showPdfPreview, setShowPdfPreview] = useState(false);
+  
   const [currentStep, setCurrentStep] = useState(0);
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
+  const appTheme = getAppTheme(isDark); // Get themed classes
+
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   const [targetJobTitle, setTargetJobTitle] = useState('');
   const [targetCompanyName, setTargetCompanyName] = useState('');
   const [specificPointsForCoverLetter, setSpecificPointsForCoverLetter] = useState('');
   const [generatedCoverLetter, setGeneratedCoverLetter] = useState('');
   const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
-
-  const allResumeDataForCoverLetter = useShallowResumeSelector();
-
-
-
-  const themeClasses = {
-    textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
-    buttonGhost: isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-200/50',
-    buttonOutline: isDark ? 'text-white border-white/20 hover:bg-white/10' : 'text-gray-700 border-gray-300 hover:bg-gray-100',
-    accentGradient: 'bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700',
-    pageBg: isDark ? 'bg-gradient-to-br from-gray-900 via-purple-950 to-gray-900' : 'bg-gradient-to-br from-gray-100 via-blue-50 to-gray-100',
-    cardBg: isDark ? 'bg-gray-800/60 backdrop-blur-md border border-gray-700' : 'bg-white/80 backdrop-blur-md border border-gray-200',
-    headerBg: isDark ? 'bg-gray-800/80 backdrop-blur-md border-b border-gray-700' : 'bg-white/80 backdrop-blur-md border-b border-gray-200',
-    text: isDark ? 'text-white' : 'text-gray-900',
-    progressBarBg: isDark ? 'bg-gray-700' : 'bg-gray-200',
-  };
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showPdfPreviewForCapture, setShowPdfPreviewForCapture] = useState(false);
 
 
   const {
@@ -67,30 +78,24 @@ function CreateResumePageContent() {
     userId: userIdInStore,
     title,
     personalInfo,
-    // Destructure the arrays too, as they are part of the payload
-    education,
-    experience,
-    skills,
-    projects,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    education, experience, skills, projects, // ensure these are selected if needed for payload
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     atsScore,
     loadResume,
     resetResume,
     setTitle: setResumeTitle,
   } = useShallowResumeSelector();
+  
+  const allResumeDataForPayload = useResumeStore.getState; // To get full current state for save/API
 
   const [isLoadingPage, setIsLoadingPage] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [showPdfPreviewForCapture, setShowPdfPreviewForCapture] = useState(false);
+  const stableLoadResume = useCallback(loadResume, []); // loadResume from store is stable
+  const stableResetResume = useCallback(resetResume, []); // resetResume from store is stable
 
-  // Using useCallback for functions passed to useEffect if they are redefined on each render
-  // However, loadResume and resetResume from Zustand store are typically stable.
-  // For explicitness or if they were derived:
-  const stableLoadResume = useCallback(loadResume, [loadResume]);
-  const stableResetResume = useCallback(resetResume, [resetResume]);
-
-
-  useEffect(() => {
+  useEffect(() => { /* ... (useEffect logic for loading/resetting resume - unchanged) ... */ 
     if (isAuthLoaded) {
       if (!clerkUserIdFromAuth) {
         router.push('/sign-in');
@@ -98,10 +103,12 @@ function CreateResumePageContent() {
       }
       setIsLoadingPage(true);
       if (resumeIdFromParams) {
+        // If current store matches, no need to fetch, unless userId mismatch (security)
         if (currentResumeIdInStore === resumeIdFromParams && userIdInStore === clerkUserIdFromAuth) {
           setIsLoadingPage(false);
           return;
         }
+        // Fetch specific resume
         fetch(`/api/resumes/${resumeIdFromParams}`)
           .then(res => {
             if (!res.ok) {
@@ -111,7 +118,7 @@ function CreateResumePageContent() {
             return res.json();
           })
           .then((data: ResumeData & { id: string }) => {
-            if (data.userId !== clerkUserIdFromAuth) {
+            if (data.userId !== clerkUserIdFromAuth) { // Security check
               throw new Error('Access denied: This resume does not belong to you.');
             }
             stableLoadResume(data);
@@ -119,44 +126,41 @@ function CreateResumePageContent() {
           .catch(err => {
             console.error("Error fetching resume for edit:", err);
             alert((err as Error).message || "Failed to load resume. Starting a new one.");
-            stableResetResume(clerkUserIdFromAuth);
-            router.replace('/dashboard/create-resume', { scroll: false });
+            stableResetResume(clerkUserIdFromAuth); // Reset with current user ID
+            router.replace('/dashboard/create-resume', { scroll: false }); // Go to clean create page
           })
           .finally(() => setIsLoadingPage(false));
-      } else {
-        if (!currentResumeIdInStore || userIdInStore !== clerkUserIdFromAuth) {
-          stableResetResume(clerkUserIdFromAuth);
+      } else { // No resumeId in params, creating new or continuing unsaved
+        if (!currentResumeIdInStore || userIdInStore !== clerkUserIdFromAuth) { // If store is empty, has different user's data, or new session
+          stableResetResume(clerkUserIdFromAuth); // Reset with current user ID
         } else {
-          if (userIdInStore !== clerkUserIdFromAuth) {
-            useResumeStore.setState({ userId: clerkUserIdFromAuth });
-          }
+          // Store has data, possibly for current user, but ensure userId is correct if auth session changed
+           if (userIdInStore !== clerkUserIdFromAuth) {
+             useResumeStore.setState({ userId: clerkUserIdFromAuth });
+           }
         }
         setIsLoadingPage(false);
       }
     }
   }, [isAuthLoaded, clerkUserIdFromAuth, resumeIdFromParams, router, stableLoadResume, stableResetResume, currentResumeIdInStore, userIdInStore]);
 
-  useEffect(() => {
+
+  useEffect(() => { // Auto-set title for new resumes
     if (personalInfo?.firstName && title === 'Untitled Resume' && !resumeIdFromParams && !currentResumeIdInStore) {
       setResumeTitle(`${personalInfo.firstName}'s Resume`);
     }
   }, [personalInfo?.firstName, title, setResumeTitle, resumeIdFromParams, currentResumeIdInStore]);
 
-  const handleSaveResume = async () => {
+  const handleSaveResume = async () => { /* ... (save logic - unchanged, but ensure it uses allResumeDataForPayload()) ... */ 
     if (!clerkUserIdFromAuth) {
       alert("User not authenticated."); return;
     }
     setIsSaving(true);
+    const currentState = allResumeDataForPayload(); // Get fresh state from store
 
-    // Get the freshest state for the payload directly from the store
-    // This ensures all fields selected by useShallowResumeSelector are up-to-date for the payload
-    const currentState = useResumeStore.getState();
-
-    const payload: ResumeApiPayload = {
+    const payload = { // Omit fields not needed for API or derived by backend
       title: currentState.title,
       personalInfo: currentState.personalInfo,
-      // Keep the full objects, including their client-side IDs.
-      // The backend (Prisma create/createMany) will handle ID generation for new sub-records.
       education: currentState.education,
       experience: currentState.experience,
       skills: currentState.skills,
@@ -165,7 +169,7 @@ function CreateResumePageContent() {
     };
 
     try {
-      const method = currentState.id ? 'PUT' : 'POST'; // Use currentState.id from store
+      const method = currentState.id ? 'PUT' : 'POST';
       const url = currentState.id ? `/api/resumes/${currentState.id}` : '/api/resumes';
       const response = await fetch(url, {
         method: method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload),
@@ -175,9 +179,9 @@ function CreateResumePageContent() {
         throw new Error(errorData.message || `Failed to save resume: ${response.statusText}`);
       }
       const savedResume = await response.json() as ResumeData & { id: string };
-      loadResume(savedResume);
+      loadResume(savedResume); // Update store with saved data, including new ID if created
       alert('Resume saved successfully!');
-      if (method === 'POST' && savedResume.id) {
+      if (method === 'POST' && savedResume.id) { // If new resume was created and saved
         router.replace(`/dashboard/create-resume?resumeId=${savedResume.id}`, { scroll: false });
       }
     } catch (error) {
@@ -190,7 +194,7 @@ function CreateResumePageContent() {
 
   const handleNext = () => {
     if (currentStep < totalSteps - 1) { setCurrentStep(currentStep + 1); }
-    else if (currentStep === totalSteps - 1) { handleSaveResume(); }
+    else if (currentStep === totalSteps - 1) { handleSaveResume(); } // On "Review" step, next is save
   };
   const handleBack = () => {
     if (currentStep > 0) { setCurrentStep(currentStep - 1); }
@@ -198,114 +202,65 @@ function CreateResumePageContent() {
 
   const progressPercentage = ((currentStep + 1) / totalSteps) * 100;
 
-  if (!isAuthLoaded || isLoadingPage) {
-    return (
-      <div className={`min-h-screen ${themeClasses.pageBg} flex items-center justify-center`}>
-        <Loader2 className={`w-12 h-12 ${themeClasses.text} animate-spin`} />
-      </div>
-    );
-  }
-
-
-
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = async () => { /* ... (PDF download logic unchanged) ... */ 
     setIsGeneratingPdf(true);
     setShowPdfPreviewForCapture(true);
-
-    // Declare resumeContentElement here so it's accessible in finally if needed, though not strictly necessary for this logic
     let resumeContentElement: HTMLElement | null = null;
-
     try {
-      // Give React a moment to render the hidden template
-      await new Promise(resolve => setTimeout(resolve, 200)); // Increased slightly for good measure
-
+      await new Promise(resolve => setTimeout(resolve, 200)); 
       resumeContentElement = document.getElementById('resume-content-for-pdf');
-
       if (!resumeContentElement) {
-        // This alert will now correctly indicate the element wasn't found AFTER the attempt to get it.
-        alert("Error: Resume content for PDF rendering could not be found in the DOM. Please try again.");
-        // No need to set visibility if element is null
+        alert("Error: Resume content for PDF rendering could not be found.");
         setIsGeneratingPdf(false);
         setShowPdfPreviewForCapture(false);
         return;
       }
-
-      // Optional: Briefly make it visible for html2canvas if issues persist, then hide again
-      // resumeContentElement.style.visibility = 'visible'; 
-      // await new Promise(resolve => setTimeout(resolve, 50)); // Very short delay
-
-      const canvas = await html2canvas(resumeContentElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false, // Set to true for html2canvas debugging if needed
-        // Ensure html2canvas captures based on the element's actual rendered size
-        // width: resumeContentElement.offsetWidth, // or scrollWidth
-        // height: resumeContentElement.offsetHeight, // or scrollHeight
-      });
-
-      // resumeContentElement.style.visibility = 'hidden'; // Hide again if made visible
-
+      const canvas = await html2canvas(resumeContentElement, { scale: 2, useCORS: true, logging: false });
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
-      });
-
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfPageHeight = pdf.internal.pageSize.getHeight();
       const imgProps = pdf.getImageProperties(imgData);
       const imgHeightInPdfUnits = (imgProps.height * pdfWidth) / imgProps.width;
-
       let heightLeft = imgHeightInPdfUnits;
       let position = 0;
-
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
       heightLeft -= pdfPageHeight;
-
       while (heightLeft > 0) {
         position -= pdfPageHeight;
         pdf.addPage();
         pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
         heightLeft -= pdfPageHeight;
       }
-
-      const resumeTitleForFile = useResumeStore.getState().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+      const resumeTitleForFile = allResumeDataForPayload().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
       pdf.save(`${resumeTitleForFile || 'resume'}.pdf`);
-
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
-      // If resumeContentElement was found and made visible, hide it on error
-      // if (resumeContentElement) resumeContentElement.style.visibility = 'hidden'; 
     } finally {
       setIsGeneratingPdf(false);
-      setShowPdfPreviewForCapture(false); // Always hide the capture div
+      setShowPdfPreviewForCapture(false);
     }
   };
 
-
-  const handleGenerateCoverLetter = async () => {
-    if (!targetJobTitle || !targetCompanyName) {
+  const handleGenerateCoverLetter = async () => { /* ... (Cover letter generation logic - unchanged but uses allResumeDataForPayload()) ... */ 
+     if (!targetJobTitle || !targetCompanyName) {
       alert("Please enter the Target Job Title and Company Name.");
       return;
     }
     setIsGeneratingCoverLetter(true);
-    setGeneratedCoverLetter(''); // Clear previous
+    setGeneratedCoverLetter(''); 
 
-    // Construct payload using all relevant parts from the store
+    const currentResumeState = allResumeDataForPayload();
     const payload = {
-      resumeData: { // Send only necessary parts of the resume
-        personalInfo: allResumeDataForCoverLetter.personalInfo,
-        experience: allResumeDataForCoverLetter.experience,
-        skills: allResumeDataForCoverLetter.skills,
-        // education: allResumeDataForCoverLetter.education, // Optional
-        // projects: allResumeDataForCoverLetter.projects, // Optional
+      resumeData: { 
+        personalInfo: currentResumeState.personalInfo,
+        experience: currentResumeState.experience,
+        skills: currentResumeState.skills,
       },
       jobTitle: targetJobTitle,
       companyName: targetCompanyName,
       specificPoints: specificPointsForCoverLetter,
-      // tone: 'semi-formal' // Or make this a user selection
     };
 
     try {
@@ -328,244 +283,225 @@ function CreateResumePageContent() {
       setIsGeneratingCoverLetter(false);
     }
   };
-
-  const handleCopyCoverLetter = () => {
+  const handleCopyCoverLetter = () => { /* ... (unchanged) ... */ 
     navigator.clipboard.writeText(generatedCoverLetter)
       .then(() => alert("Cover letter copied to clipboard!"))
-      .catch(err => alert("Failed to copy. Please copy manually."));
+      .catch(() => alert("Failed to copy. Please copy manually."));
   };
-
-  const handleDownloadCoverLetterTxt = () => {
+  const handleDownloadCoverLetterTxt = () => { /* ... (unchanged) ... */ 
     const element = document.createElement("a");
     const file = new Blob([generatedCoverLetter], { type: 'text/plain' });
     element.href = URL.createObjectURL(file);
     const safeCompanyName = targetCompanyName.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase() || "company";
     const safeJobTitle = targetJobTitle.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase() || "job";
     element.download = `cover_letter_${safeCompanyName}_${safeJobTitle}.txt`;
-    document.body.appendChild(element); // Required for this to work in FireFox
+    document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
   };
 
-
-
-
+  if (!isAuthLoaded || isLoadingPage) {
+    return (
+      <div className={cn("min-h-screen flex items-center justify-center", appTheme.pageBg)}>
+        <Loader2 className={cn("w-10 h-10 sm:w-12 sm:h-12 animate-spin", appTheme.textHeading)} />
+      </div>
+    );
+  }
 
   return (
-    <div className={`min-h-screen flex flex-col ${themeClasses.pageBg} transition-colors duration-300`}>
-      <header className={`${themeClasses.headerBg} sticky top-0 z-50 shadow-md`}>
-        <div className="max-w-full mx-auto px-4 sm:px-6 py-3">
+    <div className={cn("min-h-screen flex flex-col", appTheme.pageBg, "transition-colors duration-300")}>
+      <header className={cn("sticky top-0 z-30 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
+        <div className="max-w-full mx-auto px-4 sm:px-6 py-2.5 sm:py-3">
           <div className="flex items-center justify-between">
-            {/* Back Button and Title Section */}
-            <div className="flex items-center space-x-3">
-              <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className={`${themeClasses.text} ${themeClasses.buttonGhost}`}>
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className={appTheme.buttonGhostText}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div className="flex items-center space-x-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                  <FileText className="w-4 h-4 text-white" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 bg-primary-gradient rounded-md sm:rounded-lg flex items-center justify-center shadow">
+                  <FileText className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-white" />
                 </div>
-                <span className={`text-lg font-semibold ${themeClasses.text} hidden sm:inline truncate max-w-[200px] md:max-w-xs`} title={title}>
+                <span className={cn("text-base sm:text-lg font-semibold truncate max-w-[150px] xs:max-w-[200px] sm:max-w-xs md:max-w-sm", appTheme.textHeading)} title={title}>
                   {title || "Loading title..."}
                 </span>
               </div>
             </div>
 
-            {/* Progress Bar Section */}
-            <div className="flex-grow px-4 sm:px-8 lg:px-16">
-              <div className="max-w-xl mx-auto">
-                <div className="mb-1">
-                  <div className={`relative h-2 w-full overflow-hidden rounded-full ${themeClasses.progressBarBg}`}>
-                    <div
-                      className={`h-full w-full flex-1 ${themeClasses.accentGradient} transition-all`}
-                      style={{ transform: `translateX(-${100 - progressPercentage}%)` }}
-                    />
-                  </div>
+            <div className="flex-grow px-2 sm:px-4 lg:px-8 hidden md:block">
+              <div className="max-w-md lg:max-w-lg mx-auto">
+                <div className={cn("relative h-2 w-full overflow-hidden rounded-full mb-1", appTheme.progressBarBg)}>
+                  <div
+                    className="h-full bg-primary-gradient transition-transform duration-300 ease-out"
+                    style={{ width: `${progressPercentage}%` }} // Use width for progress bar
+                  />
                 </div>
-                <p className={`text-xs text-center ${themeClasses.textMuted}`}>
+                <p className={cn("text-xs text-center", appTheme.textMuted)}>
                   Step {currentStep + 1} of {totalSteps}: {resumeSections[currentStep]}
                 </p>
               </div>
             </div>
 
-            {/* Action Buttons Section */}
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={toggleTheme}
-                className={`p-2 rounded-lg ${themeClasses.textMuted} ${themeClasses.buttonGhost} transition-colors`}
-                aria-label="Toggle theme"
-              >
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleSaveResume}
-                disabled={isSaving}
-                className={`${themeClasses.buttonOutline} flex items-center`}
-              >
-                {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                {currentResumeIdInStore ? 'Save Changes' : 'Save Draft'}
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
+                {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDownloadPdf}
-                disabled={isGeneratingPdf || isSaving} // Disable if saving or generating PDF
-                className={`${themeClasses.buttonOutline} flex items-center`}
-              >
-                {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              <Button variant="outline" size="sm" onClick={handleSaveResume} disabled={isSaving} className="hidden sm:inline-flex">
+                {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                {currentResumeIdInStore ? 'Save' : 'Save Draft'}
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleDownloadPdf} disabled={isGeneratingPdf || isSaving} className="hidden sm:inline-flex">
+                {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <DownloadIcon className="w-4 h-4 mr-2" />}
                 PDF
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowCoverLetterModal(true)}
-                disabled={isSaving || isGeneratingPdf || !currentResumeIdInStore} // Disable if no resume saved yet
-                className={`${themeClasses.buttonOutline} flex items-center`}
-                title="Generate Cover Letter"
-              >
-                <Mail className="w-4 h-4 mr-2" />
-                Cover Letter
+              <Button variant="outline" size="sm" onClick={() => setShowCoverLetterModal(true)} disabled={isSaving || isGeneratingPdf || !currentResumeIdInStore} className="hidden lg:inline-flex">
+                <Mail className="w-4 h-4 mr-2" /> Cover Letter
               </Button>
-
-
-              <UserButton
+              <UserButton 
                 appearance={{
-                  elements: {
-                    avatarBox: "w-9 h-9 shadow-md",
-                    userButtonPopoverCard: `${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`,
-                  }
+                    elements: {
+                        avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", 
+                        userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`
+                    }
                 }}
               />
             </div>
           </div>
+           {/* Progress Bar for Mobile - visible only on md and below */}
+           <div className="md:hidden mt-2.5">
+                <div className={cn("relative h-1.5 w-full overflow-hidden rounded-full", appTheme.progressBarBg)}>
+                  <div
+                    className="h-full bg-primary-gradient transition-transform duration-300 ease-out"
+                    style={{ width: `${progressPercentage}%` }}
+                  />
+                </div>
+                <p className={cn("text-xs text-center mt-1", appTheme.textMuted)}>
+                  {currentStep + 1}/{totalSteps}: {resumeSections[currentStep]}
+                </p>
+            </div>
         </div>
       </header>
 
-      {/* Main Content Area */}
-      <main className="flex-grow container mx-auto py-8 px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        {/* Left Side: Form Sections */}
-        <div className={`lg:col-span-2 ${themeClasses.cardBg} rounded-xl p-6 sm:p-8 shadow-xl`}>
-          <ResumeForm currentStep={currentStep} />
-          {/* Navigation Buttons */}
-          <div className={`mt-8 pt-6 border-t ${isDark ? 'border-white/10' : 'border-gray-200'} flex justify-between items-center`}>
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={currentStep === 0}
-              className={`${themeClasses.buttonOutline}`}
-            >
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back
-            </Button>
-            <div className={`flex items-center space-x-1 text-sm ${themeClasses.textMuted}`}>
-              <span>{currentStep + 1}</span>
-              <span>/</span>
-              <span>{totalSteps}</span>
+      <main className="flex-grow container mx-auto py-6 sm:py-8 px-4 grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8 items-start">
+        <div className={cn(
+            "lg:col-span-2 rounded-xl sm:rounded-2xl p-5 sm:p-6 md:p-8 shadow-xl border", 
+            appTheme.formContainerBg, 
+            appTheme.formContainerBorder
+        )}>
+          <ResumeForm currentStep={currentStep} /> {/* This will render SimpleTemplate when currentStep is Review */}
+          {/* Navigation Buttons for the form */}
+          {currentStep < totalSteps -1 && ( // Hide Next/Back buttons on the Review step if SimpleTemplate is full page
+             <div className={cn("mt-8 pt-6 border-t flex justify-between items-center", appTheme.borderSecondary)}>
+                <Button variant="outline" onClick={handleBack} disabled={currentStep === 0}>
+                <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                </Button>
+                <div className={cn("flex items-center space-x-1 text-sm", appTheme.textMuted)}>
+                <span>{currentStep + 1}</span><span>/</span><span>{totalSteps}</span>
+                </div>
+                <Button onClick={handleNext} disabled={isSaving}>
+                {currentStep === totalSteps - 2 ? 'Review & Finish' : 'Next Step'} {/* Adjusted text for last step before review */}
+                <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
             </div>
-            <Button
-              onClick={handleNext}
-              className={`${themeClasses.accentGradient} text-white`}
-            >
-              {currentStep === totalSteps - 1 ? (currentResumeIdInStore ? 'Finalize & Save' : 'Save & Finish') : (currentStep === totalSteps - 2 ? 'Review & Finish' : 'Next Step')}
-              <ArrowRight className="w-4 h-4 ml-2" />
+          )}
+           {currentStep === totalSteps - 1 && ( // Special action for "Review" step's button (which is now in header)
+             <div className={cn("mt-8 pt-6 border-t text-center", appTheme.borderSecondary)}>
+                <p className={cn("text-sm", appTheme.textMuted)}>
+                    You are viewing the final resume preview. Use the header buttons to save or download.
+                </p>
+             </div>
+           )}
+        </div>
+
+        <div className="lg:col-span-1 space-y-6 sm:space-y-8 sticky top-[calc(var(--header-height,60px)+1.5rem)]"> {/* Adjust var(--header-height) */}
+          <AtsScoreDisplay />
+          <ResumePreview />
+           {/* Mobile Save/PDF/Cover Letter Actions */}
+           <div className="sm:hidden space-y-3">
+            <Button variant="outline" size="default" onClick={handleSaveResume} disabled={isSaving} className="w-full">
+                {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+                {currentResumeIdInStore ? 'Save Changes' : 'Save Draft'}
+            </Button>
+            <Button variant="outline" size="default" onClick={handleDownloadPdf} disabled={isGeneratingPdf || isSaving} className="w-full">
+                {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <DownloadIcon className="w-4 h-4 mr-2" />}
+                Download PDF
+            </Button>
+             <Button variant="outline" size="default" onClick={() => setShowCoverLetterModal(true)} disabled={isSaving || isGeneratingPdf || !currentResumeIdInStore} className="w-full">
+                <Mail className="w-4 h-4 mr-2" /> Generate Cover Letter
             </Button>
           </div>
         </div>
-
-        {/* Right Side: ATS Score & Preview */}
-        <div className="lg:col-span-1 space-y-8 sticky top-24">
-          <AtsScoreDisplay />
-          <ResumePreview />
-        </div>
-
-        {/* Hidden PDF Template for Download */}
-        {showPdfPreviewForCapture && ( // This state variable controls if SimpleTemplate is rendered
-          <div style={{
-            position: 'absolute',
-            left: '-9999px', // Way off-screen
-            top: 'auto',
-            width: '210mm',     // A4 width for layout consistency before capture
-            backgroundColor: '#fff', // Ensures canvas doesn't have transparent background
-          }}>
-            {/* This renders the div with id="resume-content-for-pdf" */}
-            <SimpleTemplate resumeData={useResumeStore.getState()} />
+        
+        {showPdfPreviewForCapture && (
+          <div style={{ position: 'absolute', left: '-9999px', top: 'auto', width: '210mm', backgroundColor: '#fff' }}>
+            <SimpleTemplate resumeData={allResumeDataForPayload()} />
           </div>
         )}
 
-        {/* Cover Letter Modal */}
         {showCoverLetterModal && (
-    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
-        <div className={`${themeClasses.cardBg} rounded-xl p-6 sm:p-8 shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col`}>
-            <div className="flex justify-between items-center mb-6">
-                <h3 className={`text-xl font-semibold ${themeClasses.text}`}>Generate Cover Letter</h3>
-                <Button variant="ghost" size="icon" onClick={() => setShowCoverLetterModal(false)} className={themeClasses.textMuted}>X</Button>
-            </div>
-
-            <div className="space-y-4 mb-6 overflow-y-auto pr-2 styled-scrollbar flex-shrink min-h-[150px]">
-                 <div>
-                    <Label htmlFor="targetJobTitle" className={themeClasses.textMuted}>Target Job Title*</Label>
-                    <Input id="targetJobTitle" value={targetJobTitle} onChange={(e) => setTargetJobTitle(e.target.value)} placeholder="e.g., Senior Software Engineer" className="bg-slate-700/50 text-white placeholder-slate-400"/>
-                </div>
-                <div>
-                    <Label htmlFor="targetCompanyName" className={themeClasses.textMuted}>Target Company Name*</Label>
-                    <Input id="targetCompanyName" value={targetCompanyName} onChange={(e) => setTargetCompanyName(e.target.value)} placeholder="e.g., Google" className="bg-slate-700/50 text-white placeholder-slate-400"/>
-                </div>
-                <div>
-                    <Label htmlFor="specificPointsForCoverLetter" className={themeClasses.textMuted}>Key Points to Emphasize (Optional)</Label>
-                    <Textarea id="specificPointsForCoverLetter" value={specificPointsForCoverLetter} onChange={(e) => setSpecificPointsForCoverLetter(e.target.value)} placeholder="e.g., My experience with project X, my passion for Y" rows={3} className="bg-slate-700/50 text-white placeholder-slate-400"/>
-                </div>
-            </div>
-
-            <Button
-                onClick={handleGenerateCoverLetter}
-                disabled={isGeneratingCoverLetter || !targetJobTitle || !targetCompanyName}
-                className={`${themeClasses.accentGradient} text-white w-full mb-4 py-2.5`}
-            >
-                {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
-                Generate with AI
-            </Button>
-
-            {generatedCoverLetter && (
-                <div className="mt-4 border-t pt-4 border-slate-700 flex-grow flex flex-col overflow-hidden">
-                    <h4 className={`text-md font-semibold mb-2 ${themeClasses.text}`}>Generated Cover Letter:</h4>
-                    <Textarea
-                        value={generatedCoverLetter}
-                        readOnly
-                        rows={10}
-                        className="text-xs leading-relaxed whitespace-pre-wrap w-full flex-grow bg-slate-700/30 border-slate-600 text-gray-200 styled-scrollbar"
-                    />
-                    <div className="mt-3 flex space-x-2">
-                        <Button variant="outline" size="sm" onClick={handleCopyCoverLetter} className={themeClasses.buttonOutline}>
-                            <Copy size={14} className="mr-1.5"/> Copy Text
-                        </Button>
-                         <Button variant="outline" size="sm" onClick={handleDownloadCoverLetterTxt} className={themeClasses.buttonOutline}>
-                            <DownloadIcon size={14} className="mr-1.5"/> Download .txt
-                        </Button>
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4 animate-fade-in-up">
+              <Card className="w-full max-w-xl lg:max-w-2xl max-h-[90vh] flex flex-col"> {/* Use Themed Card */}
+                  <CardHeader className="border-b"> {/* Use Themed CardHeader */}
+                      <div className="flex justify-between items-center">
+                          <CardTitle className={cn("text-lg sm:text-xl", appTheme.textHeading)}>Generate Cover Letter</CardTitle>
+                          <Button variant="ghost" size="icon" onClick={() => setShowCoverLetterModal(false)} className={appTheme.buttonGhostText}>
+                              <span className="text-2xl leading-none">×</span>
+                          </Button>
                       </div>
-                  </div>
-              )}
+                  </CardHeader>
+                  <CardContent className="p-5 sm:p-6 space-y-4 overflow-y-auto styled-scrollbar flex-grow">
+                      <div>
+                          <Label htmlFor="targetJobTitle" className={cn("mb-1.5", appTheme.textBody)}>Target Job Title*</Label>
+                          <Input id="targetJobTitle" value={targetJobTitle} onChange={(e) => setTargetJobTitle(e.target.value)} placeholder="e.g., Senior Software Engineer" />
+                      </div>
+                      <div>
+                          <Label htmlFor="targetCompanyName" className={cn("mb-1.5", appTheme.textBody)}>Target Company Name*</Label>
+                          <Input id="targetCompanyName" value={targetCompanyName} onChange={(e) => setTargetCompanyName(e.target.value)} placeholder="e.g., Google" />
+                      </div>
+                      <div>
+                          <Label htmlFor="specificPointsForCoverLetter" className={cn("mb-1.5", appTheme.textBody)}>Key Points to Emphasize (Optional)</Label>
+                          <Textarea id="specificPointsForCoverLetter" value={specificPointsForCoverLetter} onChange={(e) => setSpecificPointsForCoverLetter(e.target.value)} placeholder="e.g., My experience with project X, my passion for Y" rows={3} />
+                      </div>
+                      {generatedCoverLetter && (
+                          <div className="mt-4 pt-4 border-t"> {/* Themed Divider */}
+                              <h4 className={cn("text-base sm:text-md font-semibold mb-2", appTheme.textHeading)}>Generated Cover Letter:</h4>
+                              <Textarea value={generatedCoverLetter} readOnly rows={8} className="text-xs leading-relaxed whitespace-pre-wrap w-full styled-scrollbar bg-muted/50" />
+                          </div>
+                      )}
+                  </CardContent>
+                  <CardFooter className={cn("border-t p-5 sm:p-6 flex flex-col sm:flex-row items-center gap-3", appTheme.borderSecondary)}>
+                        <Button
+                            onClick={handleGenerateCoverLetter}
+                            disabled={isGeneratingCoverLetter || !targetJobTitle || !targetCompanyName}
+                            className="w-full sm:w-auto sm:flex-1 py-2.5"
+                            size="lg"
+                        >
+                            {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                            Generate with AI
+                        </Button>
+                        {generatedCoverLetter && (
+                             <div className="flex w-full sm:w-auto space-x-2">
+                                <Button variant="outline" size="default" onClick={handleCopyCoverLetter} className="flex-1 sm:flex-initial">
+                                    <Copy size={16} className="mr-1.5"/> Copy
+                                </Button>
+                                <Button variant="outline" size="default" onClick={handleDownloadCoverLetterTxt} className="flex-1 sm:flex-initial">
+                                    <DownloadIcon size={16} className="mr-1.5"/> .txt
+                                </Button>
+                             </div>
+                        )}
+                  </CardFooter>
+              </Card>
           </div>
-      </div>
-  )}
-  
-        </main>
-      </div>
-    );
+        )}
+      </main>
+    </div>
+  );
 }
 
-// Default export wrapping content in Suspense
 export default function CreateResumePage() {
-  // The useTheme() hook cannot be called here directly as this is the top-level Server Component for the route.
-  // The Suspense fallback styling should ideally be simple and not rely on hooks.
-  // For a themed fallback, you might need a client component wrapper around Suspense itself
-  // or use CSS that respects the 'dark' class on <html>.
-  // A simple, un-themed loader is safer here for the outermost Suspense.
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Basic fallback style */}
-        <Loader2 className="w-12 h-12 text-gray-700 dark:text-gray-300 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-neutral-950">
+        <Loader2 className="w-12 h-12 text-neutral-700 dark:text-neutral-300 animate-spin" />
       </div>
     }>
       <CreateResumePageContent />
