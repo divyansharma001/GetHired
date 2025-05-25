@@ -5,7 +5,7 @@
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon } from 'lucide-react';
+import { Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, Sparkles } from 'lucide-react';
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';
 import ResumePreview from '@/components/resume/resume-preview';
@@ -18,6 +18,10 @@ import { Download } from 'lucide-react'; // Add Download icon
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import SimpleTemplate from '@/components/resume/templates/simple-template';
+import { Mail, Copy, Download as DownloadIcon } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const resumeSections = ['Personal Info', 'Education', 'Experience', 'Skills', 'Projects', 'Review'];
 const totalSteps = resumeSections.length;
@@ -29,14 +33,23 @@ function CreateResumePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeIdFromParams = searchParams.get('resumeId');
- const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [showPdfPreview, setShowPdfPreview] = useState(false); 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
+  const [targetJobTitle, setTargetJobTitle] = useState('');
+  const [targetCompanyName, setTargetCompanyName] = useState('');
+  const [specificPointsForCoverLetter, setSpecificPointsForCoverLetter] = useState('');
+  const [generatedCoverLetter, setGeneratedCoverLetter] = useState('');
+  const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
+
+  const allResumeDataForCoverLetter = useShallowResumeSelector();
 
 
-  const themeClasses = { 
+
+  const themeClasses = {
     textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
     buttonGhost: isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-200/50',
     buttonOutline: isDark ? 'text-white border-white/20 hover:bg-white/10' : 'text-gray-700 border-gray-300 hover:bg-gray-100',
@@ -48,7 +61,7 @@ function CreateResumePageContent() {
     progressBarBg: isDark ? 'bg-gray-700' : 'bg-gray-200',
   };
 
-  
+
   const {
     id: currentResumeIdInStore,
     userId: userIdInStore,
@@ -99,7 +112,7 @@ function CreateResumePageContent() {
           })
           .then((data: ResumeData & { id: string }) => {
             if (data.userId !== clerkUserIdFromAuth) {
-                throw new Error('Access denied: This resume does not belong to you.');
+              throw new Error('Access denied: This resume does not belong to you.');
             }
             stableLoadResume(data);
           })
@@ -114,30 +127,30 @@ function CreateResumePageContent() {
         if (!currentResumeIdInStore || userIdInStore !== clerkUserIdFromAuth) {
           stableResetResume(clerkUserIdFromAuth);
         } else {
-           if (userIdInStore !== clerkUserIdFromAuth) {
-             useResumeStore.setState({ userId: clerkUserIdFromAuth });
-           }
+          if (userIdInStore !== clerkUserIdFromAuth) {
+            useResumeStore.setState({ userId: clerkUserIdFromAuth });
+          }
         }
         setIsLoadingPage(false);
       }
     }
   }, [isAuthLoaded, clerkUserIdFromAuth, resumeIdFromParams, router, stableLoadResume, stableResetResume, currentResumeIdInStore, userIdInStore]);
-  
+
   useEffect(() => {
     if (personalInfo?.firstName && title === 'Untitled Resume' && !resumeIdFromParams && !currentResumeIdInStore) {
-        setResumeTitle(`${personalInfo.firstName}'s Resume`);
+      setResumeTitle(`${personalInfo.firstName}'s Resume`);
     }
   }, [personalInfo?.firstName, title, setResumeTitle, resumeIdFromParams, currentResumeIdInStore]);
 
-   const handleSaveResume = async () => { 
+  const handleSaveResume = async () => {
     if (!clerkUserIdFromAuth) {
       alert("User not authenticated."); return;
     }
     setIsSaving(true);
-    
+
     // Get the freshest state for the payload directly from the store
     // This ensures all fields selected by useShallowResumeSelector are up-to-date for the payload
-    const currentState = useResumeStore.getState(); 
+    const currentState = useResumeStore.getState();
 
     const payload: ResumeApiPayload = {
       title: currentState.title,
@@ -162,10 +175,10 @@ function CreateResumePageContent() {
         throw new Error(errorData.message || `Failed to save resume: ${response.statusText}`);
       }
       const savedResume = await response.json() as ResumeData & { id: string };
-      loadResume(savedResume); 
+      loadResume(savedResume);
       alert('Resume saved successfully!');
       if (method === 'POST' && savedResume.id) {
-         router.replace(`/dashboard/create-resume?resumeId=${savedResume.id}`, { scroll: false });
+        router.replace(`/dashboard/create-resume?resumeId=${savedResume.id}`, { scroll: false });
       }
     } catch (error) {
       console.error("Failed to save resume:", error);
@@ -174,107 +187,170 @@ function CreateResumePageContent() {
       setIsSaving(false);
     }
   };
-  
-  const handleNext = () => { 
-    if (currentStep < totalSteps - 1) { setCurrentStep(currentStep + 1); } 
+
+  const handleNext = () => {
+    if (currentStep < totalSteps - 1) { setCurrentStep(currentStep + 1); }
     else if (currentStep === totalSteps - 1) { handleSaveResume(); }
   };
-  const handleBack = () => { 
+  const handleBack = () => {
     if (currentStep > 0) { setCurrentStep(currentStep - 1); }
   };
-  
+
   const progressPercentage = ((currentStep + 1) / totalSteps) * 100;
 
   if (!isAuthLoaded || isLoadingPage) {
-    return ( 
+    return (
       <div className={`min-h-screen ${themeClasses.pageBg} flex items-center justify-center`}>
         <Loader2 className={`w-12 h-12 ${themeClasses.text} animate-spin`} />
       </div>
     );
   }
 
- 
 
-const handleDownloadPdf = async () => {
-  setIsGeneratingPdf(true);
-  setShowPdfPreviewForCapture(true);
 
-  // Declare resumeContentElement here so it's accessible in finally if needed, though not strictly necessary for this logic
-  let resumeContentElement: HTMLElement | null = null; 
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    setShowPdfPreviewForCapture(true);
 
-  try {
-    // Give React a moment to render the hidden template
-    await new Promise(resolve => setTimeout(resolve, 200)); // Increased slightly for good measure
+    // Declare resumeContentElement here so it's accessible in finally if needed, though not strictly necessary for this logic
+    let resumeContentElement: HTMLElement | null = null;
 
-    resumeContentElement = document.getElementById('resume-content-for-pdf');
-    
-    if (!resumeContentElement) {
-      // This alert will now correctly indicate the element wasn't found AFTER the attempt to get it.
-      alert("Error: Resume content for PDF rendering could not be found in the DOM. Please try again.");
-      // No need to set visibility if element is null
-      setIsGeneratingPdf(false);
-      setShowPdfPreviewForCapture(false);
-      return;
-    }
+    try {
+      // Give React a moment to render the hidden template
+      await new Promise(resolve => setTimeout(resolve, 200)); // Increased slightly for good measure
 
-    // Optional: Briefly make it visible for html2canvas if issues persist, then hide again
-    // resumeContentElement.style.visibility = 'visible'; 
-    // await new Promise(resolve => setTimeout(resolve, 50)); // Very short delay
+      resumeContentElement = document.getElementById('resume-content-for-pdf');
 
-    const canvas = await html2canvas(resumeContentElement, {
-      scale: 2,
-      useCORS: true,
-      logging: false, // Set to true for html2canvas debugging if needed
-      // Ensure html2canvas captures based on the element's actual rendered size
-      // width: resumeContentElement.offsetWidth, // or scrollWidth
-      // height: resumeContentElement.offsetHeight, // or scrollHeight
-    });
+      if (!resumeContentElement) {
+        // This alert will now correctly indicate the element wasn't found AFTER the attempt to get it.
+        alert("Error: Resume content for PDF rendering could not be found in the DOM. Please try again.");
+        // No need to set visibility if element is null
+        setIsGeneratingPdf(false);
+        setShowPdfPreviewForCapture(false);
+        return;
+      }
 
-    // resumeContentElement.style.visibility = 'hidden'; // Hide again if made visible
+      // Optional: Briefly make it visible for html2canvas if issues persist, then hide again
+      // resumeContentElement.style.visibility = 'visible'; 
+      // await new Promise(resolve => setTimeout(resolve, 50)); // Very short delay
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
+      const canvas = await html2canvas(resumeContentElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false, // Set to true for html2canvas debugging if needed
+        // Ensure html2canvas captures based on the element's actual rendered size
+        // width: resumeContentElement.offsetWidth, // or scrollWidth
+        // height: resumeContentElement.offsetHeight, // or scrollHeight
+      });
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfPageHeight = pdf.internal.pageSize.getHeight();
-    const imgProps = pdf.getImageProperties(imgData);
-    const imgHeightInPdfUnits = (imgProps.height * pdfWidth) / imgProps.width;
+      // resumeContentElement.style.visibility = 'hidden'; // Hide again if made visible
 
-    let heightLeft = imgHeightInPdfUnits;
-    let position = 0;
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
 
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
-    heightLeft -= pdfPageHeight;
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfPageHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgHeightInPdfUnits = (imgProps.height * pdfWidth) / imgProps.width;
 
-    while (heightLeft > 0) {
-      position -= pdfPageHeight;
-      pdf.addPage();
+      let heightLeft = imgHeightInPdfUnits;
+      let position = 0;
+
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
       heightLeft -= pdfPageHeight;
+
+      while (heightLeft > 0) {
+        position -= pdfPageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
+        heightLeft -= pdfPageHeight;
+      }
+
+      const resumeTitleForFile = useResumeStore.getState().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+      pdf.save(`${resumeTitleForFile || 'resume'}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+      // If resumeContentElement was found and made visible, hide it on error
+      // if (resumeContentElement) resumeContentElement.style.visibility = 'hidden'; 
+    } finally {
+      setIsGeneratingPdf(false);
+      setShowPdfPreviewForCapture(false); // Always hide the capture div
     }
-    
-    const resumeTitleForFile = useResumeStore.getState().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
-    pdf.save(`${resumeTitleForFile || 'resume'}.pdf`);
-
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    alert("Failed to generate PDF. Please try again.");
-    // If resumeContentElement was found and made visible, hide it on error
-    // if (resumeContentElement) resumeContentElement.style.visibility = 'hidden'; 
-  } finally {
-    setIsGeneratingPdf(false);
-    setShowPdfPreviewForCapture(false); // Always hide the capture div
-  }
-};
+  };
 
 
+  const handleGenerateCoverLetter = async () => {
+    if (!targetJobTitle || !targetCompanyName) {
+      alert("Please enter the Target Job Title and Company Name.");
+      return;
+    }
+    setIsGeneratingCoverLetter(true);
+    setGeneratedCoverLetter(''); // Clear previous
+
+    // Construct payload using all relevant parts from the store
+    const payload = {
+      resumeData: { // Send only necessary parts of the resume
+        personalInfo: allResumeDataForCoverLetter.personalInfo,
+        experience: allResumeDataForCoverLetter.experience,
+        skills: allResumeDataForCoverLetter.skills,
+        // education: allResumeDataForCoverLetter.education, // Optional
+        // projects: allResumeDataForCoverLetter.projects, // Optional
+      },
+      jobTitle: targetJobTitle,
+      companyName: targetCompanyName,
+      specificPoints: specificPointsForCoverLetter,
+      // tone: 'semi-formal' // Or make this a user selection
+    };
+
+    try {
+      const response = await fetch('/api/ai/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to parse error" }));
+        throw new Error(errorData.message || `Failed to generate cover letter: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setGeneratedCoverLetter(data.coverLetterText);
+    } catch (error) {
+      console.error("Cover letter generation error:", error);
+      alert(`Error generating cover letter: ${error instanceof Error ? error.message : String(error)}`);
+      setGeneratedCoverLetter("Failed to generate cover letter. Please try again.");
+    } finally {
+      setIsGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleCopyCoverLetter = () => {
+    navigator.clipboard.writeText(generatedCoverLetter)
+      .then(() => alert("Cover letter copied to clipboard!"))
+      .catch(err => alert("Failed to copy. Please copy manually."));
+  };
+
+  const handleDownloadCoverLetterTxt = () => {
+    const element = document.createElement("a");
+    const file = new Blob([generatedCoverLetter], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    const safeCompanyName = targetCompanyName.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase() || "company";
+    const safeJobTitle = targetJobTitle.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase() || "job";
+    element.download = `cover_letter_${safeCompanyName}_${safeJobTitle}.txt`;
+    document.body.appendChild(element); // Required for this to work in FireFox
+    element.click();
+    document.body.removeChild(element);
+  };
 
 
-  
+
+
+
   return (
     <div className={`min-h-screen flex flex-col ${themeClasses.pageBg} transition-colors duration-300`}>
       <header className={`${themeClasses.headerBg} sticky top-0 z-50 shadow-md`}>
@@ -282,72 +358,85 @@ const handleDownloadPdf = async () => {
           <div className="flex items-center justify-between">
             {/* Back Button and Title Section */}
             <div className="flex items-center space-x-3">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className={`${themeClasses.text} ${themeClasses.buttonGhost}`}>
-                    <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                        <FileText className="w-4 h-4 text-white" />
-                    </div>
-                    <span className={`text-lg font-semibold ${themeClasses.text} hidden sm:inline truncate max-w-[200px] md:max-w-xs`} title={title}>
-                        {title || "Loading title..."}
-                    </span>
+              <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className={`${themeClasses.text} ${themeClasses.buttonGhost}`}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                  <FileText className="w-4 h-4 text-white" />
                 </div>
+                <span className={`text-lg font-semibold ${themeClasses.text} hidden sm:inline truncate max-w-[200px] md:max-w-xs`} title={title}>
+                  {title || "Loading title..."}
+                </span>
+              </div>
             </div>
 
             {/* Progress Bar Section */}
             <div className="flex-grow px-4 sm:px-8 lg:px-16">
-                <div className="max-w-xl mx-auto">
-                    <div className="mb-1">
-                        <div className={`relative h-2 w-full overflow-hidden rounded-full ${themeClasses.progressBarBg}`}>
-                            <div
-                                className={`h-full w-full flex-1 ${themeClasses.accentGradient} transition-all`}
-                                style={{ transform: `translateX(-${100 - progressPercentage}%)` }}
-                            />
-                        </div>
-                    </div>
-                    <p className={`text-xs text-center ${themeClasses.textMuted}`}>
-                        Step {currentStep + 1} of {totalSteps}: {resumeSections[currentStep]}
-                    </p>
+              <div className="max-w-xl mx-auto">
+                <div className="mb-1">
+                  <div className={`relative h-2 w-full overflow-hidden rounded-full ${themeClasses.progressBarBg}`}>
+                    <div
+                      className={`h-full w-full flex-1 ${themeClasses.accentGradient} transition-all`}
+                      style={{ transform: `translateX(-${100 - progressPercentage}%)` }}
+                    />
+                  </div>
                 </div>
+                <p className={`text-xs text-center ${themeClasses.textMuted}`}>
+                  Step {currentStep + 1} of {totalSteps}: {resumeSections[currentStep]}
+                </p>
+              </div>
             </div>
 
             {/* Action Buttons Section */}
             <div className="flex items-center space-x-3">
-                <button 
-                    onClick={toggleTheme}
-                    className={`p-2 rounded-lg ${themeClasses.textMuted} ${themeClasses.buttonGhost} transition-colors`}
-                    aria-label="Toggle theme"
-                >
-                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSaveResume} 
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-lg ${themeClasses.textMuted} ${themeClasses.buttonGhost} transition-colors`}
+                aria-label="Toggle theme"
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveResume}
                 disabled={isSaving}
                 className={`${themeClasses.buttonOutline} flex items-center`}
               >
                 {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 {currentResumeIdInStore ? 'Save Changes' : 'Save Draft'}
               </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleDownloadPdf} 
-                  disabled={isGeneratingPdf || isSaving} // Disable if saving or generating PDF
-                  className={`${themeClasses.buttonOutline} flex items-center`}
-                >
-                  {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                  PDF
-                </Button>
-              <UserButton 
-                appearance={{ 
-                    elements: { 
-                        avatarBox: "w-9 h-9 shadow-md",
-                        userButtonPopoverCard: `${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`,
-                    } 
-                }} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf || isSaving} // Disable if saving or generating PDF
+                className={`${themeClasses.buttonOutline} flex items-center`}
+              >
+                {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCoverLetterModal(true)}
+                disabled={isSaving || isGeneratingPdf || !currentResumeIdInStore} // Disable if no resume saved yet
+                className={`${themeClasses.buttonOutline} flex items-center`}
+                title="Generate Cover Letter"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Cover Letter
+              </Button>
+
+
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-9 h-9 shadow-md",
+                    userButtonPopoverCard: `${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`,
+                  }
+                }}
               />
             </div>
           </div>
@@ -391,38 +480,95 @@ const handleDownloadPdf = async () => {
           <ResumePreview />
         </div>
 
-        {/* Hidden PDF Template for Download */}  
-         {showPdfPreviewForCapture && ( // This state variable controls if SimpleTemplate is rendered
-        <div style={{
+        {/* Hidden PDF Template for Download */}
+        {showPdfPreviewForCapture && ( // This state variable controls if SimpleTemplate is rendered
+          <div style={{
             position: 'absolute',
             left: '-9999px', // Way off-screen
             top: 'auto',
             width: '210mm',     // A4 width for layout consistency before capture
             backgroundColor: '#fff', // Ensures canvas doesn't have transparent background
-        }}>
+          }}>
             {/* This renders the div with id="resume-content-for-pdf" */}
             <SimpleTemplate resumeData={useResumeStore.getState()} />
-        </div>
-    )}
-      </main>
-    </div>
-  );
+          </div>
+        )}
+
+        {/* Cover Letter Modal */}
+        {showCoverLetterModal && (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
+        <div className={`${themeClasses.cardBg} rounded-xl p-6 sm:p-8 shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col`}>
+            <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-xl font-semibold ${themeClasses.text}`}>Generate Cover Letter</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowCoverLetterModal(false)} className={themeClasses.textMuted}>X</Button>
+            </div>
+
+            <div className="space-y-4 mb-6 overflow-y-auto pr-2 styled-scrollbar flex-shrink min-h-[150px]">
+                 <div>
+                    <Label htmlFor="targetJobTitle" className={themeClasses.textMuted}>Target Job Title*</Label>
+                    <Input id="targetJobTitle" value={targetJobTitle} onChange={(e) => setTargetJobTitle(e.target.value)} placeholder="e.g., Senior Software Engineer" className="bg-slate-700/50 text-white placeholder-slate-400"/>
+                </div>
+                <div>
+                    <Label htmlFor="targetCompanyName" className={themeClasses.textMuted}>Target Company Name*</Label>
+                    <Input id="targetCompanyName" value={targetCompanyName} onChange={(e) => setTargetCompanyName(e.target.value)} placeholder="e.g., Google" className="bg-slate-700/50 text-white placeholder-slate-400"/>
+                </div>
+                <div>
+                    <Label htmlFor="specificPointsForCoverLetter" className={themeClasses.textMuted}>Key Points to Emphasize (Optional)</Label>
+                    <Textarea id="specificPointsForCoverLetter" value={specificPointsForCoverLetter} onChange={(e) => setSpecificPointsForCoverLetter(e.target.value)} placeholder="e.g., My experience with project X, my passion for Y" rows={3} className="bg-slate-700/50 text-white placeholder-slate-400"/>
+                </div>
+            </div>
+
+            <Button
+                onClick={handleGenerateCoverLetter}
+                disabled={isGeneratingCoverLetter || !targetJobTitle || !targetCompanyName}
+                className={`${themeClasses.accentGradient} text-white w-full mb-4 py-2.5`}
+            >
+                {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                Generate with AI
+            </Button>
+
+            {generatedCoverLetter && (
+                <div className="mt-4 border-t pt-4 border-slate-700 flex-grow flex flex-col overflow-hidden">
+                    <h4 className={`text-md font-semibold mb-2 ${themeClasses.text}`}>Generated Cover Letter:</h4>
+                    <Textarea
+                        value={generatedCoverLetter}
+                        readOnly
+                        rows={10}
+                        className="text-xs leading-relaxed whitespace-pre-wrap w-full flex-grow bg-slate-700/30 border-slate-600 text-gray-200 styled-scrollbar"
+                    />
+                    <div className="mt-3 flex space-x-2">
+                        <Button variant="outline" size="sm" onClick={handleCopyCoverLetter} className={themeClasses.buttonOutline}>
+                            <Copy size={14} className="mr-1.5"/> Copy Text
+                        </Button>
+                         <Button variant="outline" size="sm" onClick={handleDownloadCoverLetterTxt} className={themeClasses.buttonOutline}>
+                            <DownloadIcon size={14} className="mr-1.5"/> Download .txt
+                        </Button>
+                      </div>
+                  </div>
+              )}
+          </div>
+      </div>
+  )}
+  
+        </main>
+      </div>
+    );
 }
 
 // Default export wrapping content in Suspense
 export default function CreateResumePage() {
-    // The useTheme() hook cannot be called here directly as this is the top-level Server Component for the route.
-    // The Suspense fallback styling should ideally be simple and not rely on hooks.
-    // For a themed fallback, you might need a client component wrapper around Suspense itself
-    // or use CSS that respects the 'dark' class on <html>.
-    // A simple, un-themed loader is safer here for the outermost Suspense.
-    return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Basic fallback style */}
-                <Loader2 className="w-12 h-12 text-gray-700 dark:text-gray-300 animate-spin" />
-            </div>
-        }>
-            <CreateResumePageContent />
-        </Suspense>
-    );
+  // The useTheme() hook cannot be called here directly as this is the top-level Server Component for the route.
+  // The Suspense fallback styling should ideally be simple and not rely on hooks.
+  // For a themed fallback, you might need a client component wrapper around Suspense itself
+  // or use CSS that respects the 'dark' class on <html>.
+  // A simple, un-themed loader is safer here for the outermost Suspense.
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Basic fallback style */}
+        <Loader2 className="w-12 h-12 text-gray-700 dark:text-gray-300 animate-spin" />
+      </div>
+    }>
+      <CreateResumePageContent />
+    </Suspense>
+  );
 }
