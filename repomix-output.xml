@@ -51,6 +51,7 @@ app/api/ai/ats-score/route.ts
 app/api/ai/enhance-experience/route.ts
 app/api/ai/enhance-project/route.ts
 app/api/ai/enhance-summary/route.ts
+app/api/ai/generate-cover-letter/route.ts
 app/api/resumes/[resumeId]/route.ts
 app/api/resumes/route.ts
 app/dashboard/create-resume/page.tsx
@@ -60,6 +61,7 @@ app/layout.tsx
 app/page.tsx
 components/dashboard/dashboard-content.tsx
 components/landing/landing-page.tsx
+components/landing/sliding-company.tsx
 components/resume/ats-score-display.tsx
 components/resume/resume-form.tsx
 components/resume/resume-preview.tsx
@@ -81,6 +83,7 @@ eslint.config.mjs
 hooks/use-resume.ts
 hooks/useShallowResumeSelector.ts
 lib/ai/ats-scorer.ts
+lib/ai/cover-letter-generator.ts
 lib/ai/experience-enhancer.ts
 lib/ai/gemini.ts
 lib/ai/project-enhancer.ts
@@ -92,6 +95,7 @@ next.config.ts
 package.json
 postcss.config.mjs
 prisma/migrations/20250524181712_init_resume_models/migration.sql
+prisma/migrations/20250525094131_modified_experience_entry/migration.sql
 prisma/migrations/migration_lock.toml
 prisma/schema.prisma
 public/file.svg
@@ -107,6 +111,76 @@ types/resume.ts
 
 <files>
 This section contains the contents of the repository's files.
+
+<file path="components/landing/sliding-company.tsx">
+import React from 'react';
+
+const SlidingCompanies = () => {
+  // Mock theme classes for demonstration
+  const themeClasses = {
+    bgAlt: 'bg-gray-50',
+    border: 'border-gray-200',
+    textMuted: 'text-gray-600',
+    text: 'text-gray-900'
+  };
+
+  const companies = ['Google', 'Microsoft', 'Apple', 'Amazon', 'Netflix', 'Meta'];
+  
+  return (
+    <section className={`${themeClasses.bgAlt} py-12 border-y ${themeClasses.border} overflow-hidden`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
+        <p className={`text-center ${themeClasses.textMuted} mb-8 text-sm font-medium`}>
+          Trusted by professionals at leading companies
+        </p>
+        
+        <div className="relative">
+          <div className="flex animate-slide">
+            {/* First set of companies */}
+            {companies.map((company, index) => (
+              <div 
+                key={`first-${index}`} 
+                className={`flex-shrink-0 mx-8 sm:mx-12 text-lg sm:text-xl font-bold ${themeClasses.text} hover:opacity-100 transition-opacity cursor-default opacity-60`}
+              >
+                {company}
+              </div>
+            ))}
+            {/* Duplicate set for seamless loop */}
+            {companies.map((company, index) => (
+              <div 
+                key={`second-${index}`} 
+                className={`flex-shrink-0 mx-8 sm:mx-12 text-lg sm:text-xl font-bold ${themeClasses.text} hover:opacity-100 transition-opacity cursor-default opacity-60`}
+              >
+                {company}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <style jsx>{`
+        @keyframes slide {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        
+        .animate-slide {
+          animation: slide 20s linear infinite;
+        }
+        
+        .animate-slide:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+    </section>
+  );
+};
+
+export default SlidingCompanies;
+</file>
 
 <file path="app/api/ai/ats-score/route.ts">
 // app/api/ai/ats-score/route.ts
@@ -136,36 +210,6 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('[API_ATS_SCORE_ERROR]', error);
     return new NextResponse('Internal Server Error while calculating ATS score', { status: 500 });
-  }
-}
-</file>
-
-<file path="app/api/ai/enhance-experience/route.ts">
-// app/api/ai/enhance-experience/route.ts
-import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
-import { enhanceExperienceEntry } from '@/lib/ai/experience-enhancer';
-
-export async function POST(request: Request) {
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const body = await request.json();
-    const { description, achievements, title, jobTitle } = body;
-
-    if (!description) {
-      return new NextResponse('Experience description is required', { status: 400 });
-    }
-
-    const enhancedData = await enhanceExperienceEntry({ description, achievements, title, jobTitle });
-    return NextResponse.json(enhancedData);
-
-  } catch (error) {
-    console.error('[API_ENHANCE_EXPERIENCE_ERROR]', error);
-    return new NextResponse('Internal Server Error while enhancing experience', { status: 500 });
   }
 }
 </file>
@@ -223,6 +267,53 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('[API_ENHANCE_SUMMARY_ERROR]', error);
     return new NextResponse('Internal Server Error while enhancing summary', { status: 500 });
+  }
+}
+</file>
+
+<file path="app/api/ai/generate-cover-letter/route.ts">
+// app/api/ai/generate-cover-letter/route.ts
+import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { generateCoverLetter } from '@/lib/ai/cover-letter-generator';
+import { ResumeData } from '@/types/resume';
+
+export async function POST(request: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const body = await request.json();
+    const { resumeData, jobTitle, companyName, specificPoints, tone } = body as {
+        resumeData: Partial<ResumeData>;
+        jobTitle: string;
+        companyName: string;
+        specificPoints?: string;
+        tone?: 'formal' | 'semi-formal' | 'enthusiastic';
+    };
+
+    if (!resumeData || !jobTitle || !companyName) {
+      return new NextResponse('Missing required fields (resumeData, jobTitle, companyName)', { status: 400 });
+    }
+     if (!resumeData.personalInfo || !resumeData.personalInfo.firstName) {
+       return new NextResponse('Resume data must include at least personal information with a first name.', { status: 400 });
+     }
+
+
+    const coverLetterOutput = await generateCoverLetter({
+        resumeData,
+        jobTitle,
+        companyName,
+        specificPoints,
+        tone
+    });
+    return NextResponse.json(coverLetterOutput);
+
+  } catch (error) {
+    console.error('[API_GENERATE_COVER_LETTER_ERROR]', error);
+    return new NextResponse('Internal Server Error while generating cover letter', { status: 500 });
   }
 }
 </file>
@@ -1086,102 +1177,120 @@ const eslintConfig = [
 export default eslintConfig;
 </file>
 
-<file path="lib/ai/experience-enhancer.ts">
-// lib/ai/experience-enhancer.ts
-import { model, generationConfig, safetySettings } from './gemini'; // Your Gemini client setup
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExperienceEntry } from '@/types/resume';
+<file path="lib/ai/cover-letter-generator.ts">
+// lib/ai/cover-letter-generator.ts
+import { model, generationConfig, safetySettings } from './gemini';
+import { ResumeData } from '@/types/resume'; // Assuming you'll pass the resume data
 
-interface EnhanceExperiencePayload {
-  description: string;
-  achievements?: string[]; // Existing achievements
-  title?: string; // Resume title, for context
-  jobTitle?: string; // Target job title, for context (optional)
+interface GenerateCoverLetterPayload {
+  resumeData: Partial<ResumeData>; // Pass the relevant parts of the resume
+  jobTitle: string;
+  companyName: string;
+  specificPoints?: string; // Optional: User-provided points to emphasize
+  tone?: 'formal' | 'semi-formal' | 'enthusiastic'; // Optional: tone for the letter
 }
 
-interface EnhancedExperienceOutput {
-  enhancedDescription: string;
-  suggestedAchievements: string[];
-  // You could add an 'explanation' field if you want the AI to explain its changes
+interface GeneratedCoverLetterOutput {
+  coverLetterText: string;
+  // suggestions?: string[]; // Optional: suggestions for improvement or customization
 }
 
-export async function enhanceExperienceEntry(
-  payload: EnhanceExperiencePayload
-): Promise<EnhancedExperienceOutput> {
-  const { description, achievements = [], title, jobTitle } = payload;
+// Helper to quickly summarize resume for the prompt
+function summarizeResumeForCoverLetter(resumeData: Partial<ResumeData>): string {
+  let summary = "Key qualifications include: ";
+  if (resumeData.personalInfo?.summary) {
+    summary += `Professional Summary: ${resumeData.personalInfo.summary.substring(0, 200)}... `;
+  }
+  if (resumeData.experience && resumeData.experience.length > 0) {
+    const topExperience = resumeData.experience[0];
+    summary += `Recent experience as ${topExperience.position} at ${topExperience.company}. `;
+  }
+  if (resumeData.skills && resumeData.skills.length > 0) {
+    summary += `Top skills: ${resumeData.skills.slice(0, 5).map(s => s.name).join(', ')}. `;
+  }
+  return summary;
+}
 
-  let contextText = "The user is building a resume";
-  if (title) contextText += ` titled "${title}"`;
-  if (jobTitle) contextText += ` and might be targeting a role like "${jobTitle}"`;
-  contextText += ".";
 
-  const achievementsText = achievements.length > 0 
-    ? `Current achievements listed:\n${achievements.map(a => `- ${a}`).join('\n')}`
-    : "No specific achievements listed yet.";
+export async function generateCoverLetter(
+  payload: GenerateCoverLetterPayload
+): Promise<GeneratedCoverLetterOutput> {
+  const { resumeData, jobTitle, companyName, specificPoints, tone = 'semi-formal' } = payload;
+
+  const resumeSummary = summarizeResumeForCoverLetter(resumeData);
+
+  let promptContext = `The candidate's resume highlights: ${resumeSummary}\n`;
+  if (specificPoints) {
+    promptContext += `The candidate wants to specifically emphasize: "${specificPoints}".\n`;
+  }
 
   const prompt = `
-    You are an expert resume writing assistant specializing in ATS optimization.
-    ${contextText}
-    The user has provided the following job experience description and (optionally) existing achievements.
+    You are an expert career advisor and professional writer.
+    Generate a compelling and tailored cover letter based on the following information.
+    The candidate is applying for the role of "${jobTitle}" at "${companyName}".
+    The desired tone for the cover letter is "${tone}".
 
-    Current Description:
-    "${description}"
+    ${promptContext}
 
-    ${achievementsText}
+    The cover letter should:
+    1.  Start with a professional greeting. If a hiring manager name is not provided, use a generic professional greeting.
+    2.  Clearly state the position being applied for and where it was seen (if applicable, otherwise omit).
+    3.  Briefly introduce the candidate and express strong interest in the role and company.
+    4.  Highlight 2-3 key skills or experiences from the candidate's resume summary that directly align with the target job title.
+    5.  If specific points to emphasize were provided, weave them naturally into the letter.
+    6.  Show enthusiasm for the specific company, "${companyName}". Briefly mention why the company is a good fit or what excites the candidate about it (you can make a plausible inference if not specified).
+    7.  Conclude with a call to action, expressing eagerness for an interview.
+    8.  End with a professional closing.
 
-    Task:
-    1. Rewrite the "Current Description" to be more impactful, concise, and ATS-friendly. Focus on using strong action verbs and highlighting responsibilities clearly. The rewritten description should be a single paragraph or a few short sentences.
-    2. Based on the rewritten description, suggest 3-5 new or refined achievement-oriented bullet points. Each bullet point must start with a strong action verb. Quantify achievements with data or specific examples where possible. If existing achievements were provided, either refine them or suggest entirely new ones that are more impactful.
+    The candidate's name is ${resumeData.personalInfo?.firstName || ''} ${resumeData.personalInfo?.lastName || ''}.
+    Their contact email is ${resumeData.personalInfo?.email || '[Candidate Email]'} and phone is ${resumeData.personalInfo?.phone || '[Candidate Phone]'}.
+    Include the candidate's name and contact information at the end of the letter or in a standard letterhead format if you can represent that in text.
 
     Output MUST be a valid JSON object with the following structure:
     \`\`\`json
     {
-      "enhancedDescription": "The rewritten job description text here.",
-      "suggestedAchievements": [
-        "Suggested achievement 1...",
-        "Suggested achievement 2...",
-        "Suggested achievement 3..."
-      ]
+      "coverLetterText": "The full text of the generated cover letter here, formatted with paragraphs (use \\n for newlines)."
     }
     \`\`\`
-    Ensure all string values in the JSON are properly escaped.
+    Ensure the "coverLetterText" is a single string with appropriate newline characters for formatting.
     Do not include any explanatory text or markdown formatting outside the JSON object.
-    Your entire response must start with "{" and end with "}".
   `;
 
   try {
-    const chatSession = model.startChat({ generationConfig, safetySettings, history: [] });
+    // Adjust generationConfig if not expecting JSON directly for this, or keep it
+    const customGenerationConfig = { ...generationConfig, responseMimeType: "application/json" }; // Ensure JSON output
+    const chatSession = model.startChat({ generationConfig: customGenerationConfig, safetySettings, history: [] });
     const result = await chatSession.sendMessage(prompt);
     const responseText = result.response.text();
 
-    console.log("[Experience Enhancer] Gemini Raw Response:", responseText);
+    console.log("[Cover Letter Generator] Gemini Raw Response:", responseText);
 
     let cleanedJsonText = responseText.trim();
+    // Basic cleaning, assuming responseMimeType: "application/json" works well
     const jsonMatch = cleanedJsonText.match(/(\{[\s\S]*\})/);
-    if (jsonMatch && jsonMatch[0]) cleanedJsonText = jsonMatch[0];
-    else { /* ... your existing cleaning logic ... */ 
+    if (jsonMatch && jsonMatch[0]) {
+        cleanedJsonText = jsonMatch[0];
+    } else {
         if (cleanedJsonText.startsWith('```json')) cleanedJsonText = cleanedJsonText.substring(7);
-        else if (cleanedJsonText.startsWith('```')) cleanedJsonText = cleanedJsonText.substring(3);
         if (cleanedJsonText.endsWith('```')) cleanedJsonText = cleanedJsonText.substring(0, cleanedJsonText.length - 3);
         cleanedJsonText = cleanedJsonText.trim();
     }
 
-    console.log("[Experience Enhancer] Cleaned JSON:", cleanedJsonText);
-    if (!cleanedJsonText) throw new Error("Cleaned JSON text is empty from AI.");
 
-    const parsedResult = JSON.parse(cleanedJsonText) as EnhancedExperienceOutput;
+    if (!cleanedJsonText) {
+        throw new Error("Cleaned JSON text for cover letter is empty from AI.");
+    }
+    const parsedResult = JSON.parse(cleanedJsonText) as GeneratedCoverLetterOutput;
 
-    if (!parsedResult.enhancedDescription || !Array.isArray(parsedResult.suggestedAchievements)) {
-      throw new Error("AI response for experience enhancement is missing required fields.");
+    if (!parsedResult.coverLetterText) {
+      throw new Error("AI response for cover letter is missing 'coverLetterText' field.");
     }
     return parsedResult;
 
   } catch (error) {
-    console.error("Error enhancing experience with AI:", error);
-    // Fallback or re-throw
+    console.error("Error generating cover letter with AI:", error);
     return {
-      enhancedDescription: description + " (AI enhancement failed, please review manually)",
-      suggestedAchievements: achievements,
+      coverLetterText: `Dear Hiring Manager,\n\nI am writing to express my interest in the ${jobTitle} position at ${companyName}. (AI generation failed, please write manually or try again.)\n\nSincerely,\n${resumeData.personalInfo?.firstName || ''} ${resumeData.personalInfo?.lastName || ''}`,
     };
   }
 }
@@ -1571,118 +1680,15 @@ ALTER TABLE "SkillEntry" ADD CONSTRAINT "SkillEntry_resumeId_fkey" FOREIGN KEY (
 ALTER TABLE "ProjectEntry" ADD CONSTRAINT "ProjectEntry_resumeId_fkey" FOREIGN KEY ("resumeId") REFERENCES "Resume"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 </file>
 
+<file path="prisma/migrations/20250525094131_modified_experience_entry/migration.sql">
+-- AlterTable
+ALTER TABLE "ExperienceEntry" ADD COLUMN     "targetCompanyValues" TEXT;
+</file>
+
 <file path="prisma/migrations/migration_lock.toml">
 # Please do not edit this file manually
 # It should be added in your version-control system (e.g., Git)
 provider = "postgresql"
-</file>
-
-<file path="prisma/schema.prisma">
-// prisma/schema.prisma
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL") // Optional: for connection pooling tools like PgBouncer with Prisma Accelerate
-}
-
-// We don't define a User model here explicitly managed by Prisma for auth,
-// as Clerk handles user management. We'll link resumes to Clerk's userId.
-
-model Resume {
-  id        String   @id @default(cuid())
-  userId    String   // Clerk User ID
-  title     String
-  atsScore  Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  personalInfo PersonalInfo?
-  education    EducationEntry[]
-  experience   ExperienceEntry[]
-  skills       SkillEntry[]
-  projects     ProjectEntry[]
-
-  @@index([userId])
-}
-
-model PersonalInfo {
-  id        String  @id @default(cuid())
-  firstName String
-  lastName  String
-  email     String
-  phone     String
-  location  String
-  linkedin  String?
-  website   String?
-  summary   String  @db.Text // Use Text for potentially longer content
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String @unique // Each resume has one personal info
-}
-
-model EducationEntry {
-  id           String    @id @default(cuid())
-  institution  String
-  degree       String
-  field        String
-  startDate    String
-  endDate      String
-  gpa          String?
-  achievements String[]  @default([]) // Array of strings for bullet points
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
-  @@index([resumeId])
-}
-
-model ExperienceEntry {
-  id                  String    @id @default(cuid())
-  company             String
-  position            String
-  startDate           String
-  endDate             String
-  description         String    @db.Text
-  enhancedDescription String?   @db.Text
-  achievements        String[]  @default([]) // Array of strings for bullet points
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
-  @@index([resumeId])
-}
-
-model SkillEntry {
-  id       String @id @default(cuid())
-  name     String
-  level    String // Could be an Enum later if strict values are enforced
-  category String // Could be an Enum later
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
-  @@index([resumeId])
-  @@unique([resumeId, name]) // Optional: prevent duplicate skill names per resume
-}
-
-model ProjectEntry {
-  id           String   @id @default(cuid())
-  name         String
-  description  String   @db.Text
-  technologies String[] @default([])
-  url          String?
-  github       String?
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
-  @@index([resumeId])
-}
 </file>
 
 <file path="public/file.svg">
@@ -1703,75 +1709,6 @@ model ProjectEntry {
 
 <file path="public/window.svg">
 <svg fill="none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill-rule="evenodd" clip-rule="evenodd" d="M1.5 2.5h13v10a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1zM0 1h16v11.5a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 0 12.5zm3.75 4.5a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5M7 4.75a.75.75 0 1 1-1.5 0 .75.75 0 0 1 1.5 0m1.75.75a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5" fill="#666"/></svg>
-</file>
-
-<file path="README.md">
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-</file>
-
-<file path="tsconfig.json">
-{
-  "compilerOptions": {
-    "target": "ES2017",
-    "lib": ["dom", "dom.iterable", "esnext"],
-    "allowJs": true,
-    "skipLibCheck": true,
-    "strict": true,
-    "noEmit": true,
-    "esModuleInterop": true,
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "resolveJsonModule": true,
-    "isolatedModules": true,
-    "jsx": "preserve",
-    "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
-    "paths": {
-      "@/*": ["./*"]
-    }
-  },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
-}
 </file>
 
 <file path=".gitignore">
@@ -1850,14 +1787,12 @@ export default function Page() {
 // Apply similar minimal wrapper for sign-up page
 </file>
 
-<file path="app/api/resumes/route.ts">
-// app/api/resumes/route.ts
+<file path="app/api/ai/enhance-experience/route.ts">
+// app/api/ai/enhance-experience/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
-import { prisma } from '@/lib/db';
-import { ResumeData } from '@/types/resume'; // Assuming your full ResumeData type
+import { enhanceExperienceEntry } from '@/lib/ai/experience-enhancer';
 
-// POST handler (Create new resume)
 export async function POST(request: Request) {
   try {
     const { userId } = await auth();
@@ -1865,135 +1800,27 @@ export async function POST(request: Request) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // For body type, ensure it matches what the frontend sends for creation
-    // Omitting fields that are auto-generated or derived on the backend.
-    const body = await request.json() as Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'atsScore'> & { title: string, atsScore?:number };
-    
-    const {
-      title,
-      personalInfo,
-      education = [],
-      experience = [],
-      skills = [],
-      projects = [],
-      atsScore = 0 // Default ATS score from client or calculate here
-    } = body;
+    const body = await request.json();
+    const { description, achievements, title, jobTitle, targetCompanyValues } = body; // <<< Destructure targetCompanyValues
 
-    if (!title || !personalInfo) {
-        return new NextResponse('Missing required fields (title or personalInfo)', { status: 400 });
+    if (!description) {
+      return new NextResponse('Experience description is required', { status: 400 });
     }
 
-    const newResume = await prisma.resume.create({
-      data: {
-        userId,
+    // Pass targetCompanyValues to the enhancer function
+    const enhancedData = await enhanceExperienceEntry({
+        description,
+        achievements,
         title,
-        atsScore,
-        personalInfo: { create: personalInfo },
-        education: { create: education.map(edu => ({...edu, id: undefined})) },
-        experience: { create: experience.map(exp => ({...exp, id: undefined})) },
-        skills: { create: skills.map(skill => ({...skill, id: undefined})) },
-        projects: { create: projects.map(proj => ({...proj, id: undefined})) },
-      },
-      include: { 
-        personalInfo: true, education: true, experience: true,
-        skills: true, projects: true,
-      },
+        jobTitle,
+        targetCompanyValues // <<< Pass here
     });
-
-    return NextResponse.json(newResume, { status: 201 });
-  } catch (error) {
-    console.error('[RESUMES_POST_API]', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
-  }
-}
-
-// GET handler (Get all resumes for the user)
-export async function GET() { // request parameter is optional if not used
-  try {
-    const { userId } = await auth();
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    const resumes = await prisma.resume.findMany({
-      where: {
-        userId: userId,
-      },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-      select: { // Select only necessary fields for the dashboard list
-        id: true,
-        title: true,
-        atsScore: true,
-        updatedAt: true,
-        // Add 'status' if it's in your Prisma model
-      }
-    });
-
-    const resumesWithStatus = resumes.map(r => ({
-        ...r,
-        status: r.atsScore > 70 ? 'completed' : 'draft' as 'completed' | 'draft' 
-    }));
-
-    return NextResponse.json(resumesWithStatus);
+    return NextResponse.json(enhancedData);
 
   } catch (error) {
-    console.error('[RESUMES_GET_ALL_API]', error); // Changed log identifier
-    return new NextResponse('Internal Server Error', { status: 500 });
+    console.error('[API_ENHANCE_EXPERIENCE_ERROR]', error);
+    return new NextResponse('Internal Server Error while enhancing experience', { status: 500 });
   }
-}
-</file>
-
-<file path="app/layout.tsx">
-// app/layout.tsx
-import './globals.css'
-import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
-import { ClerkProvider } from '@clerk/nextjs'
-import { dark } from '@clerk/themes';
-import { ThemeProvider } from '@/context/theme-provider';
-
-const inter = Inter({ subsets: ['latin'] })
-
-export const metadata: Metadata = {
-  title: 'GetHired - AI-Powered Resume Builder',
-  description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with GetHired.',
-}
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  return (
-    <ClerkProvider
-      appearance={{
-        baseTheme: dark,
-        variables: {
-          colorPrimary: '#6366F1',
-          colorBackground: '#111827',
-          colorInputBackground: '#1F2937',
-          colorInputText: '#F3F4F6',
-          borderRadius: '0.75rem',
-        },
-        elements: {
-          card: 'bg-gray-800 border-gray-700 shadow-2xl',
-          formButtonPrimary: 'bg-gradient-to-r from-theme-blue-600 to-theme-purple-600 hover:opacity-90',
-          footerActionLink: 'text-purple-400 hover:text-purple-300'
-        }
-      }}
-    >
-      {/* Ensure NO WHITESPACE directly inside <html> before <body> */}
-      <html lang="en" suppressHydrationWarning>
-        <body className={`${inter.className} antialiased`}>
-          <ThemeProvider>
-            {children}
-          </ThemeProvider>
-        </body>
-      </html>
-    </ClerkProvider>
-  )
 }
 </file>
 
@@ -2166,233 +1993,6 @@ const ResumePreview: React.FC = () => {
 };
 
 export default ResumePreview;
-</file>
-
-<file path="components/resume/sections/experience.tsx">
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// components/resume/sections/experience.tsx
-'use client';
-import React, { useEffect, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useResumeStore } from '@/hooks/use-resume';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExperienceEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Sparkles, CalendarDays } from 'lucide-react';
-
-const experienceEntrySchema = z.object({
-  id: z.string(),
-  company: z.string().min(1, "Company name is required"),
-  position: z.string().min(1, "Position/Title is required"),
-  startDate: z.string().min(4, "Start date is required"),
-  endDate: z.string().min(4, "End date is required (or Present)"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long."),
-  // enhancedDescription: z.string().optional(), // AI will handle this
-  achievements: z.string().optional(), // Storing as single string for textarea
-});
-
-const experienceSchema = z.object({
-  experience: z.array(experienceEntrySchema),
-});
-
-type ExperienceFormData = z.infer<typeof experienceSchema>;
-
-const ExperienceSection: React.FC = () => {
-  const { experience, updateExperience: updateStoreExperience, addExperience: addStoreExperience, removeExperience: removeStoreExperience } = useResumeStore();
-   const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
-  const resumeTitle = useResumeStore(state => state.title);
-
-  const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ExperienceFormData>({
-    resolver: zodResolver(experienceSchema),
-    defaultValues: { experience: experience.map(exp => ({ ...exp, achievements: exp.achievements?.join('\n') })) },
-  });
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "experience",
-  });
-
-  useEffect(() => {
-    const subscription = watch((value) => {
-      if (value.experience) {
-        value.experience.forEach((expData, index) => {
-          if (expData) {
-            const achievementsArray = expData.achievements?.split('\n').filter(ach => ach.trim() !== '');
-            updateStoreExperience(index, { ...expData, achievements: achievementsArray });
-          }
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, updateStoreExperience]);
-
-  const handleAddExperience = () => {
-    addStoreExperience();
-    append({ 
-      id: `temp-${Date.now()}`, 
-      company: '', 
-      position: '', 
-      startDate: '', 
-      endDate: '', 
-      description: '',
-      achievements: ''
-    });
-  };
-  
-
-  
-
-  const handleRemoveExperience = (index: number) => {
-    const expIdToRemove = fields[index].id;
-    removeStoreExperience(expIdToRemove);
-    remove(index);
-  };
-
- const handleAiEnhance = async (index: number) => {
-    setEnhancingIndex(index);
-    const currentEntry = watch(`experience.${index}`); // Get full current entry from RHF
-
-    if (!currentEntry || !currentEntry.description) {
-        alert("Please provide a description for the experience entry first.");
-        setEnhancingIndex(null);
-        return;
-    }
-
-    try {
-      const response = await fetch('/api/ai/enhance-experience', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: currentEntry.description,
-          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''), // Send as array
-          title: resumeTitle,
-          // jobTitle: "Target Software Engineer" // Optionally get this from user input later
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `AI enhancement failed: ${response.statusText}`);
-      }
-
-      const enhancedData = await response.json();
-
-      setValue(`experience.${index}.description`, enhancedData.enhancedDescription, { shouldDirty: true, shouldValidate: true });
-      // For achievements, you might want a more sophisticated UI to merge/select them.
-      // For now, let's append them or offer to replace.
-      // Option 1: Replace achievements textarea content
-      setValue(`experience.${index}.achievements`, enhancedData.suggestedAchievements.join('\n'), { shouldDirty: true, shouldValidate: true });
-      alert("Experience enhanced! Review the changes and the suggested achievements.");
-
-    } catch (error) {
-      console.error("AI Enhancement error:", error);
-      alert(`AI Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setEnhancingIndex(null);
-    }
-  };
-
-
-
-  return (
-    <form className="space-y-8">
-      <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-6">
-        <h2 className="text-2xl font-semibold text-white">Work Experience</h2>
-        <Button type="button" variant="outline" size="sm" onClick={handleAddExperience} className="text-white border-white/20 hover:bg-white/10">
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Add Experience
-        </Button>
-      </div>
-
-      {fields.map((item, index) => (
-        <div key={item.id} className="p-6 bg-slate-800/50 border border-slate-700 rounded-lg space-y-6 relative">
-           <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => handleRemoveExperience(index)}
-            className="absolute top-3 right-3 text-red-400 hover:text-red-300 hover:bg-red-500/20"
-          >
-            <Trash2 className="w-4 h-4" />
-          </Button>
-          
-          <input type="hidden" {...register(`experience.${index}.id`)} />
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor={`experience.${index}.company`}>Company Name</Label>
-              <Input id={`experience.${index}.company`} {...register(`experience.${index}.company`)} placeholder="e.g., Tech Solutions Inc." />
-              {errors.experience?.[index]?.company && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.company?.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor={`experience.${index}.position`}>Position / Title</Label>
-              <Input id={`experience.${index}.position`} {...register(`experience.${index}.position`)} placeholder="e.g., Software Engineer" />
-              {errors.experience?.[index]?.position && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.position?.message}</p>}
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <Label htmlFor={`experience.${index}.startDate`}>Start Date</Label>
-              <div className="relative">
-                <Input id={`experience.${index}.startDate`} {...register(`experience.${index}.startDate`)} placeholder="YYYY-MM" />
-                <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-              {errors.experience?.[index]?.startDate && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.startDate?.message}</p>}
-            </div>
-            <div>
-              <Label htmlFor={`experience.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
-               <div className="relative">
-                <Input id={`experience.${index}.endDate`} {...register(`experience.${index}.endDate`)} placeholder="YYYY-MM or Present" />
-                <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              </div>
-              {errors.experience?.[index]?.endDate && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.endDate?.message}</p>}
-            </div>
-          </div>
-
-          <div>
-            <div className="flex justify-between items-center mb-1.5">
-                <Label htmlFor={`experience.${index}.description`}>Key Responsibilities & Achievements</Label>
-                <Button type="button" variant="ghost" size="sm" onClick={() => handleAiEnhance(index)} className="text-purple-400 hover:text-purple-300 text-xs p-1">
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
-                    AI Enhance
-                </Button>
-            </div>
-            <Textarea
-              id={`experience.${index}.description`}
-              {...register(`experience.${index}.description`)}
-              rows={4}
-              placeholder="Describe your role and key contributions. Start sentences with action verbs."
-            />
-            {errors.experience?.[index]?.description && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.description?.message}</p>}
-            <p className="text-xs text-gray-400 mt-1">Use bullet points for achievements if preferred (AI can help format this later).</p>
-          </div>
-
-          <div>
-            <Label htmlFor={`experience.${index}.achievements`}>Quantifiable Achievements (Optional - one per line)</Label>
-            <Textarea
-              id={`experience.${index}.achievements`}
-              {...register(`experience.${index}.achievements`)}
-              rows={3}
-              placeholder="e.g., Increased sales by 15% in Q3., Led a team of 5 developers."
-            />
-             <p className="text-xs text-gray-400 mt-1">Focus on measurable results. AI can help phrase these later.</p>
-          </div>
-        </div>
-      ))}
-      {fields.length === 0 && (
-        <p className="text-center text-gray-400 py-4">No work experience entries added yet. Click &quot;Add Experience&quot; to start.</p>
-      )}
-    </form>
-  );
-};
-
-export default ExperienceSection;
 </file>
 
 <file path="components/resume/sections/personal-info.tsx">
@@ -3111,12 +2711,228 @@ export async function getAtsScoreAndSuggestions(resumeData: Partial<ResumeData>)
 }
 </file>
 
+<file path="lib/ai/experience-enhancer.ts">
+// lib/ai/experience-enhancer.ts
+import { model, generationConfig, safetySettings } from './gemini'; // Your Gemini client setup
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { ExperienceEntry } from '@/types/resume';
+
+interface EnhanceExperiencePayload {
+  description: string;
+  achievements?: string[]; // Existing achievements
+  title?: string; // Resume title, for context
+  jobTitle?: string; // Target job title, for context (optional)
+  targetCompanyValues?: string; // <<< NEW FIELD: Comma-separated string of keywords/values
+}
+
+interface EnhancedExperienceOutput {
+  enhancedDescription: string;
+  suggestedAchievements: string[];
+}
+
+export async function enhanceExperienceEntry(
+  payload: EnhanceExperiencePayload
+): Promise<EnhancedExperienceOutput> {
+  const { description, achievements = [], title, jobTitle, targetCompanyValues } = payload;
+
+  let contextText = "The user is building a resume";
+  if (title) contextText += ` titled "${title}"`;
+  if (jobTitle) contextText += ` for a role like "${jobTitle}"`;
+
+  // <<< ADD COMPANY VALUES TO CONTEXT
+  if (targetCompanyValues && targetCompanyValues.trim() !== '') {
+    contextText += `. They are targeting a company that values: "${targetCompanyValues}". Please try to incorporate or reflect these values subtly in the language and focus of the enhanced content if appropriate.`;
+  } else {
+    contextText += ".";
+  }
+
+  const achievementsText = achievements.length > 0
+    ? `Current achievements listed:\n${achievements.map(a => `- ${a}`).join('\n')}`
+    : "No specific achievements listed yet for this role.";
+
+  const prompt = `
+    You are an expert resume writing assistant specializing in ATS optimization.
+    ${contextText}
+
+    The user has provided the following job experience description and (optionally) existing achievements for their role as "${jobTitle || 'a professional'}".
+
+    Current Description:
+    "${description}"
+
+    ${achievementsText}
+
+    Task:
+    1. Rewrite the "Current Description" to be more impactful, concise, and ATS-friendly. Focus on using strong action verbs and highlighting responsibilities clearly. The rewritten description should be a single paragraph or a few short sentences.
+    2. Based on the rewritten description AND considering the target company values (if provided), suggest 3-5 new or refined achievement-oriented bullet points. Each bullet point must start with a strong action verb. Quantify achievements with data or specific examples where possible. If existing achievements were provided, either refine them or suggest entirely new ones that are more impactful.
+
+    Output MUST be a valid JSON object with the following structure:
+    \`\`\`json
+    {
+      "enhancedDescription": "The rewritten job description text here.",
+      "suggestedAchievements": [
+        "Suggested achievement 1...",
+        "Suggested achievement 2...",
+        "Suggested achievement 3..."
+      ]
+    }
+    \`\`\`
+    Ensure all string values in the JSON are properly escaped.
+    Do not include any explanatory text or markdown formatting outside the JSON object.
+    Your entire response must start with "{" and end with "}".
+  `;
+
+  try {
+    const chatSession = model.startChat({ generationConfig, safetySettings, history: [] });
+    const result = await chatSession.sendMessage(prompt);
+    const responseText = result.response.text();
+
+    console.log("[Experience Enhancer] Gemini Raw Response:", responseText);
+    console.log("[Experience Enhancer] Prompt Sent:", prompt); // Log the prompt
+
+    let cleanedJsonText = responseText.trim();
+    const jsonMatch = cleanedJsonText.match(/(\{[\s\S]*\})/);
+    if (jsonMatch && jsonMatch[0]) cleanedJsonText = jsonMatch[0];
+    else {
+        if (cleanedJsonText.startsWith('```json')) cleanedJsonText = cleanedJsonText.substring(7);
+        else if (cleanedJsonText.startsWith('```')) cleanedJsonText = cleanedJsonText.substring(3);
+        if (cleanedJsonText.endsWith('```')) cleanedJsonText = cleanedJsonText.substring(0, cleanedJsonText.length - 3);
+        cleanedJsonText = cleanedJsonText.trim();
+    }
+
+    console.log("[Experience Enhancer] Cleaned JSON:", cleanedJsonText);
+    if (!cleanedJsonText) throw new Error("Cleaned JSON text is empty from AI.");
+
+    const parsedResult = JSON.parse(cleanedJsonText) as EnhancedExperienceOutput;
+
+    if (!parsedResult.enhancedDescription || !Array.isArray(parsedResult.suggestedAchievements)) {
+      throw new Error("AI response for experience enhancement is missing required fields.");
+    }
+    return parsedResult;
+
+  } catch (error) {
+    console.error("Error enhancing experience with AI:", error);
+    return {
+      enhancedDescription: description + " (AI enhancement failed, please review manually)",
+      suggestedAchievements: achievements,
+    };
+  }
+}
+</file>
+
 <file path="lib/utils.ts">
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+</file>
+
+<file path="prisma/schema.prisma">
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // directUrl = env("DIRECT_URL") // Optional: for connection pooling tools like PgBouncer with Prisma Accelerate
+}
+
+// We don't define a User model here explicitly managed by Prisma for auth,
+// as Clerk handles user management. We'll link resumes to Clerk's userId.
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String   // Clerk User ID
+  title     String
+  atsScore  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  personalInfo PersonalInfo?
+  education    EducationEntry[]
+  experience   ExperienceEntry[]
+  skills       SkillEntry[]
+  projects     ProjectEntry[]
+
+  @@index([userId])
+}
+
+model PersonalInfo {
+  id        String  @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+  location  String
+  linkedin  String?
+  website   String?
+  summary   String  @db.Text // Use Text for potentially longer content
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String @unique // Each resume has one personal info
+}
+
+model EducationEntry {
+  id           String    @id @default(cuid())
+  institution  String
+  degree       String
+  field        String
+  startDate    String
+  endDate      String
+  gpa          String?
+  achievements String[]  @default([]) // Array of strings for bullet points
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+}
+
+model ExperienceEntry {
+  id                  String    @id @default(cuid())
+  company             String
+  position            String
+  startDate           String
+  endDate             String
+  description         String    @db.Text
+  enhancedDescription String?   @db.Text
+  achievements        String[]  @default([])
+  targetCompanyValues String?   // <<< ADDED FIELD
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+}
+
+model SkillEntry {
+  id       String @id @default(cuid())
+  name     String
+  level    String // Could be an Enum later if strict values are enforced
+  category String // Could be an Enum later
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
+  @@unique([resumeId, name]) // Optional: prevent duplicate skill names per resume
+}
+
+model ProjectEntry {
+  id           String   @id @default(cuid())
+  name         String
+  description  String   @db.Text
+  technologies String[] @default([])
+  url          String?
+  github       String?
+
+  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId String
+
+  @@index([resumeId])
 }
 </file>
 
@@ -3214,6 +3030,132 @@ const config: Config = {
 }
 
 export default config
+</file>
+
+<file path="tsconfig.json">
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/api/resumes/[resumeId]/route.ts"],
+  "exclude": ["node_modules"]
+}
+</file>
+
+<file path="app/api/resumes/route.ts">
+// app/api/resumes/route.ts
+import { NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
+import { prisma } from '@/lib/db';
+import { ResumeData } from '@/types/resume'; // Assuming your full ResumeData type
+
+// POST handler (Create new resume)
+export async function POST(request: Request) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    // For body type, ensure it matches what the frontend sends for creation
+    // Omitting fields that are auto-generated or derived on the backend.
+    const body = await request.json() as Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'atsScore'> & { title: string, atsScore?:number };
+    
+    const {
+      title,
+      personalInfo,
+      education = [],
+      experience = [],
+      skills = [],
+      projects = [],
+      atsScore = 0 // Default ATS score from client or calculate here
+    } = body;
+
+    if (!title || !personalInfo) {
+        return new NextResponse('Missing required fields (title or personalInfo)', { status: 400 });
+    }
+
+    const newResume = await prisma.resume.create({
+      data: {
+        userId,
+        title,
+        atsScore,
+        personalInfo: { create: personalInfo },
+        education: { create: education.map(edu => ({...edu, id: undefined})) },
+        experience: { create: experience.map(exp => ({...exp, id: undefined})) },
+        skills: { create: skills.map(skill => ({...skill, id: undefined})) },
+        projects: { create: projects.map(proj => ({...proj, id: undefined})) },
+      },
+      include: { 
+        personalInfo: true, education: true, experience: true,
+        skills: true, projects: true,
+      },
+    });
+
+    return NextResponse.json(newResume, { status: 201 });
+  } catch (error) {
+    console.error('[RESUMES_POST_API]', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+// GET handler (Get all resumes for the user)
+export async function GET() { // request parameter is optional if not used
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const resumes = await prisma.resume.findMany({
+      where: {
+        userId: userId,
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+      select: { // Select only necessary fields for the dashboard list
+        id: true,
+        title: true,
+        atsScore: true,
+        updatedAt: true,
+        // Add 'status' if it's in your Prisma model
+      }
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const resumesWithStatus = resumes.map((r: any) => ({
+        ...r,
+        status: r.atsScore > 70 ? 'completed' : 'draft' as 'completed' | 'draft' 
+    }));
+
+    return NextResponse.json(resumesWithStatus);
+
+  } catch (error) {
+    console.error('[RESUMES_GET_ALL_API]', error); // Changed log identifier
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
 </file>
 
 <file path="app/globals.css">
@@ -3323,404 +3265,56 @@ export default config
 }
 </file>
 
-<file path="components/landing/landing-page.tsx">
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// components/landing/landing-page.tsx
-"use client";
-import React, { useState, useEffect } from 'react';
-import Link from 'next/link'; // Import Link
-import { useRouter } from 'next/navigation'; // Import useRouter for programmatic navigation if needed
-import { ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, Sparkles } from 'lucide-react';
-import { useTheme } from '@/context/theme-provider'; // Assuming you created this
+<file path="app/layout.tsx">
+// app/layout.tsx
+import './globals.css'
+import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
+import { ClerkProvider } from '@clerk/nextjs'
+import { dark } from '@clerk/themes';
+import { ThemeProvider } from '@/context/theme-provider';
 
-const LandingPageContent = () => {
-  const [isVisible, setIsVisible] = useState(false);
-  const { theme, toggleTheme } = useTheme(); // Use your theme context
-  const router = useRouter(); // Initialize router
+const inter = Inter({ subsets: ['latin'] })
 
-  useEffect(() => {
-    setIsVisible(true);
-  }, []);
+export const metadata: Metadata = {
+  title: 'GetHired - AI-Powered Resume Builder',
+  description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with GetHired.',
+}
 
-  const isDark = theme === 'dark';
-
-  const themeClasses = {
-    bg: isDark ? 'bg-gray-900' : 'bg-white',
-    bgAlt: isDark ? 'bg-gray-800' : 'bg-gray-50',
-    text: isDark ? 'text-white' : 'text-gray-900',
-    textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
-    textMuted2: isDark ? 'text-gray-400' : 'text-gray-500',
-    border: isDark ? 'border-gray-700' : 'border-gray-200',
-    cardBg: isDark ? 'bg-gray-800/50' : 'bg-white', // Note: opacity might behave differently on light bg
-    accent: 'bg-gradient-to-r from-blue-600 to-purple-600',
-    accentHover: 'hover:from-blue-700 hover:to-purple-700'
-  };
-
-  // Placeholder for demo video click
-  const handleWatchDemo = () => {
-    alert("Watch Demo functionality to be implemented!");
-    // Example: router.push('/demo'); or open a modal
-  };
-
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <div className={`${themeClasses.bg} transition-colors duration-300`}>
-      {/* Navigation */}
-      <nav className={`flex items-center justify-between px-6 py-4 max-w-7xl mx-auto ${themeClasses.bg} backdrop-blur-md bg-opacity-80 sticky top-0 z-50`}>
-        <Link href="/" className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-            GetHired
-          </span>
-        </Link>
-        
-        <div className="hidden md:flex items-center space-x-8">
-          <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Features</a>
-          <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Pricing</a>
-          <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Examples</a>
-          <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>Reviews</a>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <button 
-            onClick={toggleTheme}
-            className={`p-2 rounded-lg ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`}
-            aria-label="Toggle theme"
-          >
-            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-          </button>
-          <Link href="/sign-in" passHref>
-            <button className={`${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors`}>
-              Sign in
-            </button>
-          </Link>
-          <Link href="/sign-up" passHref>
-            <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-6 py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5`}>
-              Get Started
-            </button>
-          </Link>
-        </div>
-      </nav>
-
-      {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-6 pt-20 pb-32 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-transparent rounded-3xl"></div>
-        
-        <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className={`inline-flex items-center ${isDark ? 'bg-blue-900/30 text-blue-300 border border-blue-700/30' : 'bg-blue-50 text-blue-700'} px-4 py-2 rounded-full text-sm font-semibold mb-8 backdrop-blur-sm`}>
-            <div className="w-2 h-2 bg-green-400 rounded-full mr-3 animate-pulse"></div>
-            Trusted by 150,000+ professionals worldwide
-          </div>
-          
-          <h1 className={`text-5xl md:text-7xl font-bold ${themeClasses.text} mb-8 leading-tight`}>
-            Build resumes that
-            <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent block">
-              dominate ATS systems
-            </span>
-          </h1>
-          
-          <p className={`text-xl md:text-2xl ${themeClasses.textMuted} mb-12 max-w-3xl mx-auto leading-relaxed`}>
-            AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6 mb-20">
-            <Link href="/sign-up" passHref> {/* Main CTA to sign-up */}
-              <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-10 py-4 rounded-xl font-semibold text-lg flex items-center transition-all duration-200 shadow-2xl hover:shadow-blue-500/25 transform hover:-translate-y-1`}>
-                Create Professional Resume
-                <ArrowRight className="w-5 h-5 ml-3" />
-              </button>
-            </Link>
-            <button 
-              onClick={handleWatchDemo}
-              className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-semibold text-lg transition-colors group`}
-            >
-              <div className="p-3 rounded-full bg-white/10 backdrop-blur-sm mr-3 group-hover:bg-white/20 transition-colors">
-                <Play className="w-5 h-5" />
-              </div>
-              Watch Demo (2 min)
-            </button>
-          </div>
-
-          {/* Enhanced Stats (no changes needed here for button functionality) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl mx-auto">
-            {[
-              { value: '97%', label: 'Interview Rate', color: 'text-green-400' },
-              { value: '150K+', label: 'Resumes Created', color: 'text-blue-400' },
-              { value: '4.9/5', label: 'User Rating', color: 'text-yellow-400' },
-              { value: '90 sec', label: 'Average Build Time', color: 'text-purple-400' }
-            ].map((stat, index) => (
-              <div key={index} className={`text-center p-6 rounded-2xl ${themeClasses.cardBg} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300`}>
-                <div className={`text-3xl font-bold ${stat.color} mb-2`}>
-                  {stat.value}
-                </div>
-                <div className={`text-sm ${themeClasses.textMuted2} font-medium`}>
-                  {stat.label}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Social Proof (no changes needed here for button functionality) */}
-      <section className={`${themeClasses.bgAlt} py-20`}>
-        <div className="max-w-7xl mx-auto px-6">
-          <p className={`text-center ${themeClasses.textMuted} mb-12 font-medium`}>
-            Trusted by professionals at leading companies
-          </p>
-          <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-4 opacity-70"> {/* Added flex-wrap and gap-y for responsiveness */}
-            {['Google', 'Microsoft', 'Apple', 'Amazon', 'Netflix', 'Meta'].map((company) => (
-              <div key={company} className={`text-2xl font-bold ${themeClasses.text} hover:opacity-100 transition-opacity`}>
-                {company}
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Features (no changes needed here for button functionality) */}
-      <section id="features" className="max-w-7xl mx-auto px-6 py-32">
-        <div className="text-center mb-20">
-          <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
-            Advanced Features for Modern Job Seekers
-          </h2>
-          <p className={`text-xl ${themeClasses.textMuted} max-w-3xl mx-auto`}>
-            Enterprise-grade tools that give you the competitive edge in today&apos;s job market
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            {
-              icon: Users,
-              title: 'Advanced ATS Optimization',
-              description: 'Bypass 99% of ATS filters with our proprietary scanning technology and keyword optimization engine.',
-              color: 'blue' // Keep these as strings for Tailwind JIT
-            },
-            {
-              icon: Award,
-              title: 'AI Content Generation',
-              description: 'Generate compelling bullet points and achievements using GPT-powered writing assistance.',
-              color: 'green'
-            },
-            {
-              icon: Clock,
-              title: 'Premium Templates',
-              description: 'Access 50+ executive-level templates designed by Fortune 500 hiring managers.',
-              color: 'purple'
-            },
-            {
-              icon: Shield,
-              title: 'Real-Time Analytics',
-              description: 'Live scoring system with detailed feedback on keyword density, formatting, and impact.',
-              color: 'orange'
-            },
-            {
-              icon: Check,
-              title: 'Multi-Format Export',
-              description: 'Export to PDF, Word, LinkedIn, and share via custom branded links with tracking.',
-              color: 'red'
-            },
-            {
-              icon: Star,
-              title: 'Cover Letter Suite',
-              description: 'AI-generated cover letters that perfectly complement your resume with consistent branding.',
-              color: 'yellow'
-            }
-          ].map((feature, index) => (
-            <div key={index} className={`p-8 rounded-2xl ${themeClasses.cardBg} border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl group`}>
-              <div className={`w-14 h-14 bg-${feature.color}-100 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}>
-                {/* Feature icon color needs to be handled carefully with dynamic class names. 
-                    Consider mapping 'color' to specific Tailwind classes or using inline styles if JIT issues arise.
-                    For simplicity with Tailwind JIT, ensure full class names are present or use a mapping.
-                    Example: text-blue-600, text-green-600 etc.
-                */}
-                <feature.icon className={`w-7 h-7 text-${feature.color}-600`} />
-              </div>
-              <h3 className={`text-xl font-bold ${themeClasses.text} mb-4`}>
-                {feature.title}
-              </h3>
-              <p className={`${themeClasses.textMuted} leading-relaxed`}>
-                {feature.description}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* How it works (no changes needed here for button functionality) */}
-      <section className={`${themeClasses.bgAlt} py-32`}>
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-20">
-            <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
-              Three Steps to Success
-            </h2>
-            <p className={`text-xl ${themeClasses.textMuted}`}>
-              Professional results in under 3 minutes
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-12">
-            {[
-              {
-                step: '01',
-                title: 'Import Your Data',
-                description: 'Upload your existing resume or LinkedIn profile. Our AI extracts and optimizes your information automatically.'
-              },
-              {
-                step: '02',
-                title: 'AI Enhancement',
-                description: 'Choose from premium templates while our AI suggests improvements, keywords, and quantified achievements.'
-              },
-              {
-                step: '03',
-                title: 'Deploy & Track',
-                description: 'Download your ATS-optimized resume and track application performance with built-in analytics.'
-              }
-            ].map((item, index) => (
-              <div key={index} className="text-center group">
-                <div className="relative mb-8">
-                  <div className={`w-20 h-20 bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-3xl flex items-center justify-center text-xl font-bold mx-auto shadow-2xl group-hover:scale-110 transition-transform duration-300`}>
-                    {item.step}
-                  </div>
-                  {index < 2 && (
-                    <div className={`hidden md:block absolute top-10 left-full w-full h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'}`}></div>
-                  )}
-                </div>
-                <h3 className={`text-2xl font-bold ${themeClasses.text} mb-4`}>
-                  {item.title}
-                </h3>
-                <p className={`${themeClasses.textMuted} text-lg leading-relaxed`}>
-                  {item.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Testimonials (no changes needed here for button functionality) */}
-      <section id="testimonials" className="max-w-7xl mx-auto px-6 py-32">
-        <div className="text-center mb-20">
-          <h2 className={`text-4xl md:text-5xl font-bold ${themeClasses.text} mb-6`}>
-            Success Stories
-          </h2>
-          <p className={`text-xl ${themeClasses.textMuted}`}>
-            Real results from real professionals
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8">
-          {[
-            {
-              name: 'Sarah Chen',
-              role: 'Senior Software Engineer',
-              company: 'Google',
-              content: 'Landed 5 FAANG interviews in two weeks. The ATS optimization is incredible - my resume now ranks in the top 2% of applicants.',
-              rating: 5
-            },
-            {
-              name: 'Marcus Johnson',
-              role: 'VP of Marketing',
-              company: 'Stripe',
-              content: 'The AI writing assistant transformed my achievements into compelling stories. Increased my interview rate by 400%.',
-              rating: 5
-            },
-            {
-              name: 'Emily Rodriguez',
-              role: 'Lead Product Designer',
-              company: 'Airbnb',
-              content: 'Professional, modern, and effective. Got my dream role at a unicorn startup thanks to the premium templates.',
-              rating: 5
-            }
-          ].map((testimonial, index) => (
-            <div key={index} className={`p-8 rounded-2xl ${themeClasses.cardBg} border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl`}>
-              <div className="flex mb-6">
-                {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
-                ))}
-              </div>
-              <p className={`${themeClasses.textMuted} text-lg mb-6 leading-relaxed italic`}>
-                &quot;{testimonial.content}&quot;
-              </p>
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full mr-4 flex items-center justify-center text-white font-bold">
-                  {testimonial.name.split(' ').map(n => n[0]).join('')}
-                </div>
-                <div>
-                  <div className={`font-bold ${themeClasses.text}`}>
-                    {testimonial.name}
-                  </div>
-                  <div className={`text-sm ${themeClasses.textMuted2}`}>
-                    {testimonial.role} at {testimonial.company}
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-32 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="max-w-5xl mx-auto px-6 text-center relative z-10">
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-8 leading-tight">
-            Ready to Transform Your Career?
-          </h2>
-          <p className="text-xl text-blue-100 mb-12 max-w-2xl mx-auto">
-            Join 150,000+ professionals who&apos;ve accelerated their careers with AI-powered resumes
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6">
-            <Link href="/sign-up" passHref> {/* CTA to sign-up */}
-              <button className="bg-white text-gray-900 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 shadow-2xl transform hover:-translate-y-1">
-                Start Building Now - Free
-              </button>
-            </Link>
-            <button 
-              onClick={handleWatchDemo}
-              className="border-2 border-white text-white px-10 py-4 rounded-xl font-semibold text-lg hover:bg-white hover:text-gray-900 transition-all duration-200"
-            >
-              View Live Demo
-            </button>
-          </div>
-          <p className="text-blue-200 text-sm mt-6">
-            No credit card required • 7-day free trial • Cancel anytime
-          </p>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className={`${themeClasses.bgAlt} border-t ${themeClasses.border}`}>
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-            <Link href="/" className="flex items-center space-x-3 mb-6 md:mb-0">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className={`text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent`}>
-                GetHired
-              </span>
-            </Link>
-            <div className="flex flex-wrap justify-center space-x-8"> {/* Added flex-wrap and justify-center */}
-              {['Privacy Policy', 'Terms of Service', 'Support Center', 'API Documentation'].map((link) => (
-                <a key={link} href="#" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors font-medium`}>
-                  {link}
-                </a>
-              ))}
-            </div>
-          </div>
-          <div className={`border-t ${themeClasses.border} pt-8 text-center ${themeClasses.textMuted2}`}>
-            <p>© 2024 GetHired. All rights reserved. Built with cutting-edge AI technology.</p>
-          </div>
-        </div>
-      </footer>
-    </div>
-  );
-};
-
-export default LandingPageContent;
+    <ClerkProvider
+      appearance={{
+        baseTheme: dark,
+        variables: {
+          colorPrimary: '#6366F1',
+          colorBackground: '#111827',
+          colorInputBackground: '#1F2937',
+          colorInputText: '#F3F4F6',
+          borderRadius: '0.75rem',
+        },
+        elements: {
+          card: 'bg-gray-800 border-gray-700 shadow-2xl',
+          formButtonPrimary: 'bg-gradient-to-r from-theme-blue-600 to-theme-purple-600 hover:opacity-90',
+          footerActionLink: 'text-purple-400 hover:text-purple-300'
+        }
+      }}
+    >
+      {/* Ensure NO WHITESPACE directly inside <html> before <body> */}
+      <html lang="en" suppressHydrationWarning>
+        <body className={`${inter.className} antialiased`}>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </body>
+      </html>
+    </ClerkProvider>
+  )
+}
 </file>
 
 <file path="components/resume/ats-score-display.tsx">
@@ -4018,6 +3612,257 @@ const AtsScoreDisplay: React.FC = () => {
 export default AtsScoreDisplay;
 </file>
 
+<file path="components/resume/sections/experience.tsx">
+/* eslint-disable @typescript-eslint/no-unused-vars */
+'use client';
+import React, { useEffect, useState } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useResumeStore } from '@/hooks/use-resume';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { ExperienceEntry } from '@/types/resume';
+import { PlusCircle, Trash2, Sparkles, CalendarDays, Target } from 'lucide-react'; // Added Target icon
+
+const experienceEntrySchema = z.object({
+  id: z.string(),
+  company: z.string().min(1, "Company name is required"),
+  position: z.string().min(1, "Position/Title is required"),
+  startDate: z.string().min(4, "Start date is required"),
+  endDate: z.string().min(4, "End date is required (or Present)"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long."),
+  achievements: z.string().optional(), // Storing as single string for textarea
+  targetCompanyValues: z.string().optional(), // <<< NEW FIELD
+});
+
+const experienceSchema = z.object({
+  experience: z.array(experienceEntrySchema),
+});
+
+type ExperienceFormData = z.infer<typeof experienceSchema>;
+
+const ExperienceSection: React.FC = () => {
+  const { experience, updateExperience: updateStoreExperience, addExperience: addStoreExperience, removeExperience: removeStoreExperience } = useResumeStore();
+  const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
+  const resumeTitle = useResumeStore(state => state.title);
+
+  const { control, register, handleSubmit, watch, setValue, formState: { errors } } = useForm<ExperienceFormData>({
+    resolver: zodResolver(experienceSchema),
+    defaultValues: { experience: experience.map(exp => ({ ...exp, achievements: exp.achievements?.join('\n'), targetCompanyValues: exp.targetCompanyValues || '' })) }, // Added targetCompanyValues
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "experience",
+  });
+
+  useEffect(() => {
+    const subscription = watch((value) => {
+      if (value.experience) {
+        value.experience.forEach((expData, index) => {
+          if (expData) {
+            const achievementsArray = expData.achievements?.split('\n').filter(ach => ach.trim() !== '');
+            // Also ensure targetCompanyValues is passed to the store if needed, or handle directly from RHF
+            updateStoreExperience(index, { ...expData, achievements: achievementsArray });
+          }
+        });
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, updateStoreExperience]);
+
+  const handleAddExperience = () => {
+    const newId = addStoreExperience(); // Get the ID from the store action
+    append({
+      id: newId, // Use the ID from the store
+      company: '',
+      position: '',
+      startDate: '',
+      endDate: '',
+      description: '',
+      achievements: '',
+      targetCompanyValues: '' // <<< NEW FIELD
+    });
+  };
+
+  const handleRemoveExperience = (index: number) => {
+    const expIdToRemove = fields[index].id;
+    removeStoreExperience(expIdToRemove);
+    remove(index);
+  };
+
+  const handleAiEnhance = async (index: number) => {
+    setEnhancingIndex(index);
+    const currentEntry = watch(`experience.${index}`);
+
+    if (!currentEntry || !currentEntry.description) {
+      alert("Please provide a description for the experience entry first.");
+      setEnhancingIndex(null);
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/ai/enhance-experience', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          description: currentEntry.description,
+          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''),
+          title: resumeTitle,
+          jobTitle: currentEntry.position, // Using current position as jobTitle for context
+          targetCompanyValues: currentEntry.targetCompanyValues || '', // <<< PASS NEW FIELD
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `AI enhancement failed: ${response.statusText}`);
+      }
+
+      const enhancedData = await response.json();
+
+      setValue(`experience.${index}.description`, enhancedData.enhancedDescription, { shouldDirty: true, shouldValidate: true });
+      setValue(`experience.${index}.achievements`, enhancedData.suggestedAchievements.join('\n'), { shouldDirty: true, shouldValidate: true });
+      alert("Experience enhanced! Review the changes and the suggested achievements.");
+
+    } catch (error) {
+      console.error("AI Enhancement error:", error);
+      alert(`AI Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setEnhancingIndex(null);
+    }
+  };
+
+  return (
+    <form className="space-y-8">
+      <div className="flex justify-between items-center border-b border-white/10 pb-3 mb-6">
+        <h2 className="text-2xl font-semibold text-white">Work Experience</h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddExperience} className="text-white border-white/20 hover:bg-white/10">
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Add Experience
+        </Button>
+      </div>
+
+      {fields.map((item, index) => (
+        <div key={item.id} className="p-6 bg-slate-800/50 border border-slate-700 rounded-lg space-y-6 relative">
+           <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => handleRemoveExperience(index)}
+            className="absolute top-3 right-3 text-red-400 hover:text-red-300 hover:bg-red-500/20"
+          >
+            <Trash2 className="w-4 h-4" />
+          </Button>
+
+          <input type="hidden" {...register(`experience.${index}.id`)} />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor={`experience.${index}.company`}>Company Name</Label>
+              <Input id={`experience.${index}.company`} {...register(`experience.${index}.company`)} placeholder="e.g., Tech Solutions Inc." />
+              {errors.experience?.[index]?.company && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.company?.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor={`experience.${index}.position`}>Position / Title</Label>
+              <Input id={`experience.${index}.position`} {...register(`experience.${index}.position`)} placeholder="e.g., Software Engineer" />
+              {errors.experience?.[index]?.position && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.position?.message}</p>}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label htmlFor={`experience.${index}.startDate`}>Start Date</Label>
+              <div className="relative">
+                <Input id={`experience.${index}.startDate`} {...register(`experience.${index}.startDate`)} placeholder="YYYY-MM" />
+                <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
+              {errors.experience?.[index]?.startDate && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.startDate?.message}</p>}
+            </div>
+            <div>
+              <Label htmlFor={`experience.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
+               <div className="relative">
+                <Input id={`experience.${index}.endDate`} {...register(`experience.${index}.endDate`)} placeholder="YYYY-MM or Present" />
+                <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              </div>
+              {errors.experience?.[index]?.endDate && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.endDate?.message}</p>}
+            </div>
+          </div>
+
+          {/* Target Company Values Input */}
+          <div>
+            <Label htmlFor={`experience.${index}.targetCompanyValues`}>
+                Target Company Keywords/Values (Optional)
+            </Label>
+            <div className="relative">
+                <Input
+                    id={`experience.${index}.targetCompanyValues`}
+                    {...register(`experience.${index}.targetCompanyValues`)}
+                    placeholder="e.g., innovation, customer-centric, agile, specific tech stack"
+                    className="pl-10"
+                />
+                <Target className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">
+                Provide comma-separated keywords or values important to the company you&apos;re targeting with this experience.
+            </p>
+          </div>
+
+
+          <div>
+            <div className="flex justify-between items-center mb-1.5">
+                <Label htmlFor={`experience.${index}.description`}>Key Responsibilities</Label>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleAiEnhance(index)}
+                    disabled={enhancingIndex === index} // Disable button while enhancing this specific entry
+                    className="text-purple-400 hover:text-purple-300 text-xs p-1"
+                  >
+                    {enhancingIndex === index ? (
+                        <Sparkles className="w-3.5 h-3.5 mr-1 animate-spin" />
+                    ) : (
+                        <Sparkles className="w-3.5 h-3.5 mr-1" />
+                    )}
+                    AI Enhance Description & Achievements
+                </Button>
+            </div>
+            <Textarea
+              id={`experience.${index}.description`}
+              {...register(`experience.${index}.description`)}
+              rows={4}
+              placeholder="Describe your role and key contributions. Start sentences with action verbs."
+            />
+            {errors.experience?.[index]?.description && <p className="text-red-400 text-xs mt-1">{errors.experience[index]?.description?.message}</p>}
+          </div>
+
+          <div>
+            <Label htmlFor={`experience.${index}.achievements`}>Quantifiable Achievements (Optional - one per line)</Label>
+            <Textarea
+              id={`experience.${index}.achievements`}
+              {...register(`experience.${index}.achievements`)}
+              rows={3}
+              placeholder="e.g., Increased sales by 15% in Q3., Led a team of 5 developers."
+            />
+             <p className="text-xs text-gray-400 mt-1">The AI can help generate or refine these based on your description above.</p>
+          </div>
+        </div>
+      ))}
+      {fields.length === 0 && (
+        <p className="text-center text-gray-400 py-4">No work experience entries added yet. Click &quot;Add Experience&quot; to start.</p>
+      )}
+    </form>
+  );
+};
+
+export default ExperienceSection;
+</file>
+
 <file path="hooks/useShallowResumeSelector.ts">
 // hooks/useShallowResumeSelector.ts
 import { useSyncExternalStoreWithSelector } from 'use-sync-external-store/with-selector';
@@ -4114,6 +3959,564 @@ export function useShallowResumeSelector(): ShallowSelectedResumeParts {
 }
 </file>
 
+<file path="README.md">
+````markdown
+# GetHired
+
+**AI-Powered, ATS-Optimized Resume Builder**
+
+GetHired combines the latest in AI with professional templates and real-time feedback to help you craft resumes that get noticed.
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Getting Started](#getting-started)
+  - [1. Clone the Repo](#1-clone-the-repo)
+  - [2. Install Dependencies](#2-install-dependencies)
+  - [3. Configure Environment](#3-configure-environment)
+  - [4. Database Setup](#4-database-setup)
+  - [5. Run the Dev Server](#5-run-the-dev-server)
+- [Production Build](#production-build)
+- [Linting](#linting)
+- [Deployment](#deployment)
+- [Resources](#resources)
+- [License](#license)
+
+---
+
+## Features
+
+- **AI-Powered Content Generation:** Summaries, experience bullets, project descriptions
+- **Real-Time ATS Scoring & Feedback:** Ensure keyword optimization and formatting standards
+- **Multi-Step Builder:** Guided form flow for personal info, experience, education, skills
+- **Live Preview & PDF Export:** See changes instantly and download a print-ready PDF
+- **User Dashboard:** Save, edit, and manage multiple resumes
+- **Dark/Light Mode:** Switch themes to reduce eye strain
+
+## Tech Stack
+
+- **Framework:** Next.js (App Router)
+- **Language:** TypeScript
+- **AI Engine:** Google Gemini
+- **Auth:** Clerk
+- **ORM:** Prisma (PostgreSQL)
+- **Styling:** Tailwind CSS
+- **State:** Zustand
+- **Forms & Validation:** React Hook Form + Zod
+
+## Prerequisites
+
+- Node.js v18+ and npm/yarn/pnpm
+- Git
+- Access to a PostgreSQL database
+- API keys for:
+  - Google Gemini
+  - Clerk
+
+## Getting Started
+
+### 1. Clone the Repo
+
+```bash
+git clone https://github.com/your-username/resumeai-pro.git
+cd resumeai-pro
+````
+
+### 2. Install Dependencies
+
+```bash
+# npm
+npm install
+# or yarn
+yarn install
+# or pnpm
+pnpm install
+```
+
+### 3. Configure Environment
+
+Create a `.env.local` file at the project root:
+
+```env
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
+CLERK_SECRET_KEY=sk_test_xxx
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+# PostgreSQL
+DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
+# (Optional) DIRECT_URL for pooling
+# DIRECT_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
+
+# Google Gemini
+GEMINI_API_KEY=your_gemini_api_key
+```
+
+> **Tip:** Keep your keys secure and never commit `.env.local` to version control.
+
+### 4. Database Setup
+
+```bash
+# Generate and apply migrations
+npx prisma migrate dev --name init
+# (Optional) Preview in Prisma Studio
+npx prisma studio
+```
+
+### 5. Run the Dev Server
+
+```bash
+npm run dev
+# or yarn dev
+# or pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Production Build
+
+```bash
+npm run build
+# or yarn build
+# or pnpm build
+```
+
+This outputs an optimized build in the `.next` folder.
+
+## Linting
+
+```bash
+npm run lint
+# or yarn lint
+# or pnpm lint
+```
+
+## Deployment
+
+We recommend deploying on Vercel:
+
+1. Push your code to GitHub
+2. Import the repo in Vercel
+3. Add environment variables in Vercel dashboard
+4. Vercel will auto-run `npm run build` and deploy
+
+*For other platforms, see [Next.js deployment docs](https://nextjs.org/docs/deployment).*
+
+## Resources
+
+* [Next.js Documentation](https://nextjs.org/docs)
+* [Prisma Docs](https://www.prisma.io/docs)
+* [Clerk Quickstart](https://clerk.com/docs)
+* [Tailwind CSS Guide](https://tailwindcss.com/docs)
+
+
+```
+```
+</file>
+
+<file path="components/landing/landing-page.tsx">
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// components/landing/landing-page.tsx
+"use client";
+import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, Sparkles, TrendingUp, Zap, Target } from 'lucide-react';
+import { useTheme } from '@/context/theme-provider';
+import SlidingCompanies from './sliding-company';
+
+const LandingPageContent = () => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [scrollY, setScrollY] = useState(0);
+  const { theme, toggleTheme } = useTheme();
+  const router = useRouter();
+
+  useEffect(() => {
+    setIsVisible(true);
+    
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const isDark = theme === 'dark';
+
+  const themeClasses = {
+    bg: isDark ? 'bg-gray-900' : 'bg-white',
+    bgAlt: isDark ? 'bg-gray-800' : 'bg-gray-50',
+    text: isDark ? 'text-white' : 'text-gray-900',
+    textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
+    textMuted2: isDark ? 'text-gray-400' : 'text-gray-500',
+    border: isDark ? 'border-gray-700' : 'border-gray-200',
+    cardBg: isDark ? 'bg-gray-800/50' : 'bg-white',
+    accent: 'bg-gradient-to-r from-blue-600 to-indigo-600',
+    accentHover: 'hover:from-blue-700 hover:to-indigo-700'
+  };
+
+  const handleWatchDemo = () => {
+    alert("Watch Demo functionality to be implemented!");
+  };
+
+  return (
+    <div className={`${themeClasses.bg} transition-colors duration-300 font-sans`}>
+      {/* Navigation */}
+      <nav className={`flex items-center justify-between px-4 sm:px-6 py-3 max-w-7xl mx-auto ${themeClasses.bg} backdrop-blur-md bg-opacity-90 sticky top-0 z-50 border-b ${themeClasses.border}`}>
+        <Link href="/" className="flex items-center space-x-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+            GetHired
+          </span>
+        </Link>
+        
+        <div className="hidden md:flex items-center space-x-6">
+          <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Features</a>
+          <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Pricing</a>
+          <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Examples</a>
+          <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Reviews</a>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <button 
+            onClick={toggleTheme}
+            className={`p-2 rounded-md ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`}
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </button>
+          <Link href="/sign-in" passHref>
+            <button className={`${themeClasses.textMuted} hover:${themeClasses.text} text-sm font-medium transition-colors`}>
+              Sign in
+            </button>
+          </Link>
+          <Link href="/sign-up" passHref>
+            <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5`}>
+              Get Started
+            </button>
+          </Link>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24 relative overflow-hidden">
+        {/* Animated background elements */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-400/10 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-400/10 rounded-full blur-3xl animate-pulse animation-delay-1000"></div>
+        </div>
+        
+        <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          {/* Status badge */}
+          <div className={`inline-flex items-center ${isDark ? 'bg-emerald-900/20 text-emerald-300 border border-emerald-700/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}>
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div>
+            Trusted by 150,000+ professionals worldwide
+          </div>
+          
+          {/* Main headline */}
+          <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}>
+            <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold ${themeClasses.text} mb-6 leading-tight tracking-tight`}>
+              Build resumes that
+              <span className="block bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent animate-gradient-x">
+                dominate ATS systems
+              </span>
+            </h1>
+          </div>
+          
+          {/* Subtitle */}
+          <div className="animate-fade-in-up" style={{animationDelay: '0.6s'}}>
+            <p className={`text-lg sm:text-xl ${themeClasses.textMuted} mb-10 max-w-2xl mx-auto leading-relaxed`}>
+              AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster.
+            </p>
+          </div>
+          
+          {/* CTA buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-16 animate-fade-in-up" style={{animationDelay: '0.8s'}}>
+            <Link href="/sign-up" passHref>
+              <button className={`${themeClasses.accent} ${themeClasses.accentHover} text-white px-8 py-3.5 rounded-lg font-semibold flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group`}>
+                Create Professional Resume
+                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
+            </Link>
+            <button 
+              onClick={handleWatchDemo}
+              className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors group`}
+            >
+              <div className={`p-2.5 rounded-full ${isDark ? 'bg-white/10' : 'bg-gray-100'} backdrop-blur-sm mr-3 group-hover:bg-blue-50 transition-colors`}>
+                <Play className="w-4 h-4" />
+              </div>
+              Watch Demo (2 min)
+            </button>
+          </div>
+
+          {/* Stats grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '1s'}}>
+            {[
+              { value: '97%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-500' },
+              { value: '150K+', label: 'Resumes Created', icon: Users, color: 'text-blue-500' },
+              { value: '4.9/5', label: 'User Rating', icon: Star, color: 'text-yellow-500' },
+              { value: '90s', label: 'Build Time', icon: Zap, color: 'text-purple-500' }
+            ].map((stat, index) => (
+              <div key={index} className={`text-center p-4 sm:p-6 rounded-xl ${themeClasses.cardBg} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-400/30 transition-all duration-300 hover:-translate-y-1 group`}>
+                <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2 group-hover:scale-110 transition-transform`} />
+                <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1`}>
+                  {stat.value}
+                </div>
+                <div className={`text-xs sm:text-sm ${themeClasses.textMuted2} font-medium`}>
+                  {stat.label}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof */}
+      <section className={`${themeClasses.bgAlt} py-12 border-y ${themeClasses.border}`}>
+        {/* <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <p className={`text-center ${themeClasses.textMuted} mb-8 text-sm font-medium`}>
+            Trusted by professionals at leading companies
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-8 sm:gap-12 opacity-60">
+            {['Google', 'Microsoft', 'Apple', 'Amazon', 'Netflix', 'Meta'].map((company) => (
+              <div key={company} className={`text-lg sm:text-xl font-bold ${themeClasses.text} hover:opacity-100 transition-opacity cursor-default`}>
+                {company}
+              </div>
+            ))}
+          </div>
+        </div> */}
+        <SlidingCompanies/>
+      </section>
+
+      {/* Features */}
+      <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 py-20">
+        <div className="text-center mb-16">
+          <h2 className={`text-3xl sm:text-4xl font-bold ${themeClasses.text} mb-4 tracking-tight`}>
+            Advanced Features for Modern Job Seekers
+          </h2>
+          <p className={`text-lg ${themeClasses.textMuted} max-w-2xl mx-auto`}>
+            Enterprise-grade tools that give you the competitive edge in today&apos;s job market
+          </p>
+        </div>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
+          {[
+            {
+              icon: Target,
+              title: 'Advanced ATS Optimization',
+              description: 'Bypass 99% of ATS filters with our proprietary scanning technology and keyword optimization engine.',
+              iconColor: 'text-blue-600',
+              bgColor: isDark ? 'bg-blue-600/10' : 'bg-blue-50'
+            },
+            {
+              icon: Zap,
+              title: 'AI Content Generation',
+              description: 'Generate compelling bullet points and achievements using GPT-powered writing assistance.',
+              iconColor: 'text-emerald-600',
+              bgColor: isDark ? 'bg-emerald-600/10' : 'bg-emerald-50'
+            },
+            {
+              icon: Award,
+              title: 'Premium Templates',
+              description: 'Access 50+ executive-level templates designed by Fortune 500 hiring managers.',
+              iconColor: 'text-purple-600',
+              bgColor: isDark ? 'bg-purple-600/10' : 'bg-purple-50'
+            },
+            {
+              icon: TrendingUp,
+              title: 'Real-Time Analytics',
+              description: 'Live scoring system with detailed feedback on keyword density, formatting, and impact.',
+              iconColor: 'text-orange-600',
+              bgColor: isDark ? 'bg-orange-600/10' : 'bg-orange-50'
+            },
+            {
+              icon: Check,
+              title: 'Multi-Format Export',
+              description: 'Export to PDF, Word, LinkedIn, and share via custom branded links with tracking.',
+              iconColor: 'text-red-600',
+              bgColor: isDark ? 'bg-red-600/10' : 'bg-red-50'
+            },
+            {
+              icon: Star,
+              title: 'Cover Letter Suite',
+              description: 'AI-generated cover letters that perfectly complement your resume with consistent branding.',
+              iconColor: 'text-yellow-600',
+              bgColor: isDark ? 'bg-yellow-600/10' : 'bg-yellow-50'
+            }
+          ].map((feature, index) => (
+            <div key={index} className={`p-6 rounded-xl ${themeClasses.cardBg} border ${themeClasses.border} hover:border-blue-400/30 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg group`}>
+              <div className={`w-12 h-12 ${feature.bgColor} rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
+                <feature.icon className={`w-6 h-6 ${feature.iconColor}`} />
+              </div>
+              <h3 className={`text-lg font-bold ${themeClasses.text} mb-3`}>
+                {feature.title}
+              </h3>
+              <p className={`${themeClasses.textMuted} text-sm leading-relaxed`}>
+                {feature.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className={`${themeClasses.bgAlt} py-20`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="text-center mb-16">
+            <h2 className={`text-3xl sm:text-4xl font-bold ${themeClasses.text} mb-4 tracking-tight`}>
+              Three Steps to Success
+            </h2>
+            <p className={`text-lg ${themeClasses.textMuted}`}>
+              Professional results in under 3 minutes
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+            {[
+              {
+                step: '01',
+                title: 'Import Your Data',
+                description: 'Upload your existing resume or LinkedIn profile. Our AI extracts and optimizes your information automatically.'
+              },
+              {
+                step: '02',
+                title: 'AI Enhancement',
+                description: 'Choose from premium templates while our AI suggests improvements, keywords, and quantified achievements.'
+              },
+              {
+                step: '03',
+                title: 'Deploy & Track',
+                description: 'Download your ATS-optimized resume and track application performance with built-in analytics.'
+              }
+            ].map((item, index) => (
+              <div key={index} className="text-center group">
+                <div className="relative mb-6">
+                  <div className={`w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center text-lg font-bold mx-auto shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                    {item.step}
+                  </div>
+                  {index < 2 && (
+                    <div className={`hidden md:block absolute top-8 left-full w-full h-0.5 ${isDark ? 'bg-gray-700' : 'bg-gray-300'} -z-10`}></div>
+                  )}
+                </div>
+                <h3 className={`text-xl font-bold ${themeClasses.text} mb-3`}>
+                  {item.title}
+                </h3>
+                <p className={`${themeClasses.textMuted} leading-relaxed`}>
+                  {item.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+
+
+      {/* Final CTA */}
+      <section className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 py-20 relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/10"></div>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+          <h2 className="text-3xl sm:text-5xl font-bold text-white mb-6 leading-tight tracking-tight">
+            Ready to Transform Your Career?
+          </h2>
+          <p className="text-lg text-blue-100 mb-8 max-w-2xl mx-auto">
+            Join 150,000+ professionals who&apos;ve accelerated their careers with AI-powered resumes
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <Link href="/sign-up" passHref>
+              <button className="bg-white text-gray-900 px-8 py-3.5 rounded-lg font-semibold hover:bg-gray-100 transition-all duration-200 shadow-lg transform hover:-translate-y-1">
+                Start Building Now - Free
+              </button>
+            </Link>
+            <button 
+              onClick={handleWatchDemo}
+              className="border-2 border-white text-white px-8 py-3.5 rounded-lg font-semibold hover:bg-white hover:text-gray-900 transition-all duration-200"
+            >
+              View Live Demo
+            </button>
+          </div>
+          <p className="text-blue-200 text-xs mt-4">
+            No credit card required • 7-day free trial • Cancel anytime
+          </p>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className={`${themeClasses.bgAlt} border-t ${themeClasses.border}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6">
+            <Link href="/" className="flex items-center space-x-2 mb-4 md:mb-0">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-md">
+                <Sparkles className="w-4 h-4 text-white" />
+              </div>
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                GetHired
+              </span>
+            </Link>
+            <div className="flex flex-wrap justify-center gap-6">
+              {['Privacy Policy', 'Terms of Service', 'Support Center', 'API Documentation'].map((link) => (
+                <a key={link} href="#" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>
+                  {link}
+                </a>
+              ))}
+            </div>
+          </div>
+          <div className={`border-t ${themeClasses.border} pt-6 text-center ${themeClasses.textMuted2}`}>
+            <p className="text-sm">© {new Date().getFullYear()} GetHired. All rights reserved. Built with cutting-edge AI technology.</p>
+          </div>
+        </div>
+      </footer>
+
+      <style jsx>{`
+        @keyframes fade-in-up {
+          from {
+            opacity: 0;
+            transform: translateY(20px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        @keyframes gradient-x {
+          0%, 100% {
+            background-size: 200% 200%;
+            background-position: left center;
+          }
+          50% {
+            background-size: 200% 200%;
+            background-position: right center;
+          }
+        }
+        
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s ease-out forwards;
+          opacity: 0;
+        }
+        
+        .animate-gradient-x {
+          animation: gradient-x 3s ease infinite;
+        }
+        
+        .animation-delay-1000 {
+          animation-delay: 1s;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default LandingPageContent;
+</file>
+
 <file path="types/resume.ts">
 // types/resume.ts
 
@@ -4138,7 +4541,6 @@ export interface EducationEntry {
   gpa?: string;
   achievements?: string[]; // List of achievements/bullet points
 }
-
 export interface ExperienceEntry {
   id: string; // UUID
   company: string;
@@ -4148,6 +4550,7 @@ export interface ExperienceEntry {
   description: string; // User's raw input
   enhancedDescription?: string; // AI-enhanced version
   achievements: string[]; // Bullet points, can also be AI-enhanced
+  targetCompanyValues?: string; // <<< ADDED for storing in Zustand/DB if needed
 }
 
 export interface SkillEntry {
@@ -4209,6 +4612,7 @@ export interface ATSScoreDetails {
 </file>
 
 <file path="app/api/resumes/[resumeId]/route.ts">
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/api/resumes/[resumeId]/route.ts
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
@@ -4219,11 +4623,11 @@ type UpdateResumePayload = Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'upd
 
 export async function GET(
   request: Request, // Not used, but part of the signature
-  context: { params: { resumeId: string } }
+  context: { params: Promise<{ resumeId: string }> }
 ) {
   try {
     const { userId } = await auth();
-    const resumeId = context.params.resumeId;
+    const { resumeId } = await context.params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -4256,20 +4660,19 @@ export async function GET(
     return NextResponse.json(resume);
 
   } catch (error) {
-    console.error(`[RESUME_ID_GET_API Error for ID: ${context.params.resumeId}]`, error);
+    console.error(`[RESUME_ID_GET_API Error for ID: ${(await context.params).resumeId}]`, error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
 export async function PUT(
   request: Request,
-  context: { params: { resumeId: string } }
+  context: { params: Promise<{ resumeId: string }> }
 ) {
-
-    console.log('[DEBUG] PUT context:', JSON.stringify(context, null, 2));
+  console.log('[DEBUG] PUT context:', JSON.stringify(context, null, 2));
   try {
     const { userId } = await auth();
-    const resumeId = await context.params.resumeId;
+    const { resumeId } = await context.params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -4304,7 +4707,7 @@ export async function PUT(
       return new NextResponse('Access denied', { status: 403 });
     }
 
-    const updatedResume = await prisma.$transaction(async (tx) => {
+    const updatedResume = await prisma.$transaction(async (tx : any) => {
       await tx.resume.update({
         where: { id: resumeId },
         data: { title, atsScore },
@@ -4391,11 +4794,11 @@ export async function PUT(
 
 export async function DELETE(
   request: Request, // Not used, but part of the signature
-  context: { params: { resumeId: string } }
+  context: { params: Promise<{ resumeId: string }> }
 ) {
   try {
     const { userId } = await auth();
-    const resumeId = context.params.resumeId;
+    const { resumeId } = await context.params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -4706,7 +5109,8 @@ export default DashboardContent;
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
     "start": "next start",
     "lint": "next lint"
   },
@@ -4758,7 +5162,7 @@ export default DashboardContent;
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon } from 'lucide-react';
+import { Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, Sparkles } from 'lucide-react';
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';
 import ResumePreview from '@/components/resume/resume-preview';
@@ -4771,6 +5175,10 @@ import { Download } from 'lucide-react'; // Add Download icon
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import SimpleTemplate from '@/components/resume/templates/simple-template';
+import { Mail, Copy, Download as DownloadIcon } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 
 const resumeSections = ['Personal Info', 'Education', 'Experience', 'Skills', 'Projects', 'Review'];
 const totalSteps = resumeSections.length;
@@ -4782,14 +5190,23 @@ function CreateResumePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeIdFromParams = searchParams.get('resumeId');
- const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [showPdfPreview, setShowPdfPreview] = useState(false); 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [showPdfPreview, setShowPdfPreview] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === 'dark';
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
+  const [targetJobTitle, setTargetJobTitle] = useState('');
+  const [targetCompanyName, setTargetCompanyName] = useState('');
+  const [specificPointsForCoverLetter, setSpecificPointsForCoverLetter] = useState('');
+  const [generatedCoverLetter, setGeneratedCoverLetter] = useState('');
+  const [isGeneratingCoverLetter, setIsGeneratingCoverLetter] = useState(false);
+
+  const allResumeDataForCoverLetter = useShallowResumeSelector();
 
 
-  const themeClasses = { 
+
+  const themeClasses = {
     textMuted: isDark ? 'text-gray-300' : 'text-gray-600',
     buttonGhost: isDark ? 'hover:bg-gray-700/50' : 'hover:bg-gray-200/50',
     buttonOutline: isDark ? 'text-white border-white/20 hover:bg-white/10' : 'text-gray-700 border-gray-300 hover:bg-gray-100',
@@ -4801,7 +5218,7 @@ function CreateResumePageContent() {
     progressBarBg: isDark ? 'bg-gray-700' : 'bg-gray-200',
   };
 
-  
+
   const {
     id: currentResumeIdInStore,
     userId: userIdInStore,
@@ -4852,7 +5269,7 @@ function CreateResumePageContent() {
           })
           .then((data: ResumeData & { id: string }) => {
             if (data.userId !== clerkUserIdFromAuth) {
-                throw new Error('Access denied: This resume does not belong to you.');
+              throw new Error('Access denied: This resume does not belong to you.');
             }
             stableLoadResume(data);
           })
@@ -4867,30 +5284,30 @@ function CreateResumePageContent() {
         if (!currentResumeIdInStore || userIdInStore !== clerkUserIdFromAuth) {
           stableResetResume(clerkUserIdFromAuth);
         } else {
-           if (userIdInStore !== clerkUserIdFromAuth) {
-             useResumeStore.setState({ userId: clerkUserIdFromAuth });
-           }
+          if (userIdInStore !== clerkUserIdFromAuth) {
+            useResumeStore.setState({ userId: clerkUserIdFromAuth });
+          }
         }
         setIsLoadingPage(false);
       }
     }
   }, [isAuthLoaded, clerkUserIdFromAuth, resumeIdFromParams, router, stableLoadResume, stableResetResume, currentResumeIdInStore, userIdInStore]);
-  
+
   useEffect(() => {
     if (personalInfo?.firstName && title === 'Untitled Resume' && !resumeIdFromParams && !currentResumeIdInStore) {
-        setResumeTitle(`${personalInfo.firstName}'s Resume`);
+      setResumeTitle(`${personalInfo.firstName}'s Resume`);
     }
   }, [personalInfo?.firstName, title, setResumeTitle, resumeIdFromParams, currentResumeIdInStore]);
 
-   const handleSaveResume = async () => { 
+  const handleSaveResume = async () => {
     if (!clerkUserIdFromAuth) {
       alert("User not authenticated."); return;
     }
     setIsSaving(true);
-    
+
     // Get the freshest state for the payload directly from the store
     // This ensures all fields selected by useShallowResumeSelector are up-to-date for the payload
-    const currentState = useResumeStore.getState(); 
+    const currentState = useResumeStore.getState();
 
     const payload: ResumeApiPayload = {
       title: currentState.title,
@@ -4915,10 +5332,10 @@ function CreateResumePageContent() {
         throw new Error(errorData.message || `Failed to save resume: ${response.statusText}`);
       }
       const savedResume = await response.json() as ResumeData & { id: string };
-      loadResume(savedResume); 
+      loadResume(savedResume);
       alert('Resume saved successfully!');
       if (method === 'POST' && savedResume.id) {
-         router.replace(`/dashboard/create-resume?resumeId=${savedResume.id}`, { scroll: false });
+        router.replace(`/dashboard/create-resume?resumeId=${savedResume.id}`, { scroll: false });
       }
     } catch (error) {
       console.error("Failed to save resume:", error);
@@ -4927,107 +5344,170 @@ function CreateResumePageContent() {
       setIsSaving(false);
     }
   };
-  
-  const handleNext = () => { 
-    if (currentStep < totalSteps - 1) { setCurrentStep(currentStep + 1); } 
+
+  const handleNext = () => {
+    if (currentStep < totalSteps - 1) { setCurrentStep(currentStep + 1); }
     else if (currentStep === totalSteps - 1) { handleSaveResume(); }
   };
-  const handleBack = () => { 
+  const handleBack = () => {
     if (currentStep > 0) { setCurrentStep(currentStep - 1); }
   };
-  
+
   const progressPercentage = ((currentStep + 1) / totalSteps) * 100;
 
   if (!isAuthLoaded || isLoadingPage) {
-    return ( 
+    return (
       <div className={`min-h-screen ${themeClasses.pageBg} flex items-center justify-center`}>
         <Loader2 className={`w-12 h-12 ${themeClasses.text} animate-spin`} />
       </div>
     );
   }
 
- 
 
-const handleDownloadPdf = async () => {
-  setIsGeneratingPdf(true);
-  setShowPdfPreviewForCapture(true);
 
-  // Declare resumeContentElement here so it's accessible in finally if needed, though not strictly necessary for this logic
-  let resumeContentElement: HTMLElement | null = null; 
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    setShowPdfPreviewForCapture(true);
 
-  try {
-    // Give React a moment to render the hidden template
-    await new Promise(resolve => setTimeout(resolve, 200)); // Increased slightly for good measure
+    // Declare resumeContentElement here so it's accessible in finally if needed, though not strictly necessary for this logic
+    let resumeContentElement: HTMLElement | null = null;
 
-    resumeContentElement = document.getElementById('resume-content-for-pdf');
-    
-    if (!resumeContentElement) {
-      // This alert will now correctly indicate the element wasn't found AFTER the attempt to get it.
-      alert("Error: Resume content for PDF rendering could not be found in the DOM. Please try again.");
-      // No need to set visibility if element is null
-      setIsGeneratingPdf(false);
-      setShowPdfPreviewForCapture(false);
-      return;
-    }
+    try {
+      // Give React a moment to render the hidden template
+      await new Promise(resolve => setTimeout(resolve, 200)); // Increased slightly for good measure
 
-    // Optional: Briefly make it visible for html2canvas if issues persist, then hide again
-    // resumeContentElement.style.visibility = 'visible'; 
-    // await new Promise(resolve => setTimeout(resolve, 50)); // Very short delay
+      resumeContentElement = document.getElementById('resume-content-for-pdf');
 
-    const canvas = await html2canvas(resumeContentElement, {
-      scale: 2,
-      useCORS: true,
-      logging: false, // Set to true for html2canvas debugging if needed
-      // Ensure html2canvas captures based on the element's actual rendered size
-      // width: resumeContentElement.offsetWidth, // or scrollWidth
-      // height: resumeContentElement.offsetHeight, // or scrollHeight
-    });
+      if (!resumeContentElement) {
+        // This alert will now correctly indicate the element wasn't found AFTER the attempt to get it.
+        alert("Error: Resume content for PDF rendering could not be found in the DOM. Please try again.");
+        // No need to set visibility if element is null
+        setIsGeneratingPdf(false);
+        setShowPdfPreviewForCapture(false);
+        return;
+      }
 
-    // resumeContentElement.style.visibility = 'hidden'; // Hide again if made visible
+      // Optional: Briefly make it visible for html2canvas if issues persist, then hide again
+      // resumeContentElement.style.visibility = 'visible'; 
+      // await new Promise(resolve => setTimeout(resolve, 50)); // Very short delay
 
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
+      const canvas = await html2canvas(resumeContentElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false, // Set to true for html2canvas debugging if needed
+        // Ensure html2canvas captures based on the element's actual rendered size
+        // width: resumeContentElement.offsetWidth, // or scrollWidth
+        // height: resumeContentElement.offsetHeight, // or scrollHeight
+      });
 
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfPageHeight = pdf.internal.pageSize.getHeight();
-    const imgProps = pdf.getImageProperties(imgData);
-    const imgHeightInPdfUnits = (imgProps.height * pdfWidth) / imgProps.width;
+      // resumeContentElement.style.visibility = 'hidden'; // Hide again if made visible
 
-    let heightLeft = imgHeightInPdfUnits;
-    let position = 0;
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
 
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
-    heightLeft -= pdfPageHeight;
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfPageHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgHeightInPdfUnits = (imgProps.height * pdfWidth) / imgProps.width;
 
-    while (heightLeft > 0) {
-      position -= pdfPageHeight;
-      pdf.addPage();
+      let heightLeft = imgHeightInPdfUnits;
+      let position = 0;
+
       pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
       heightLeft -= pdfPageHeight;
+
+      while (heightLeft > 0) {
+        position -= pdfPageHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeightInPdfUnits);
+        heightLeft -= pdfPageHeight;
+      }
+
+      const resumeTitleForFile = useResumeStore.getState().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+      pdf.save(`${resumeTitleForFile || 'resume'}.pdf`);
+
+    } catch (error) {
+      console.error("Error generating PDF:", error);
+      alert("Failed to generate PDF. Please try again.");
+      // If resumeContentElement was found and made visible, hide it on error
+      // if (resumeContentElement) resumeContentElement.style.visibility = 'hidden'; 
+    } finally {
+      setIsGeneratingPdf(false);
+      setShowPdfPreviewForCapture(false); // Always hide the capture div
     }
-    
-    const resumeTitleForFile = useResumeStore.getState().title.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
-    pdf.save(`${resumeTitleForFile || 'resume'}.pdf`);
-
-  } catch (error) {
-    console.error("Error generating PDF:", error);
-    alert("Failed to generate PDF. Please try again.");
-    // If resumeContentElement was found and made visible, hide it on error
-    // if (resumeContentElement) resumeContentElement.style.visibility = 'hidden'; 
-  } finally {
-    setIsGeneratingPdf(false);
-    setShowPdfPreviewForCapture(false); // Always hide the capture div
-  }
-};
+  };
 
 
+  const handleGenerateCoverLetter = async () => {
+    if (!targetJobTitle || !targetCompanyName) {
+      alert("Please enter the Target Job Title and Company Name.");
+      return;
+    }
+    setIsGeneratingCoverLetter(true);
+    setGeneratedCoverLetter(''); // Clear previous
+
+    // Construct payload using all relevant parts from the store
+    const payload = {
+      resumeData: { // Send only necessary parts of the resume
+        personalInfo: allResumeDataForCoverLetter.personalInfo,
+        experience: allResumeDataForCoverLetter.experience,
+        skills: allResumeDataForCoverLetter.skills,
+        // education: allResumeDataForCoverLetter.education, // Optional
+        // projects: allResumeDataForCoverLetter.projects, // Optional
+      },
+      jobTitle: targetJobTitle,
+      companyName: targetCompanyName,
+      specificPoints: specificPointsForCoverLetter,
+      // tone: 'semi-formal' // Or make this a user selection
+    };
+
+    try {
+      const response = await fetch('/api/ai/generate-cover-letter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: "Failed to parse error" }));
+        throw new Error(errorData.message || `Failed to generate cover letter: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setGeneratedCoverLetter(data.coverLetterText);
+    } catch (error) {
+      console.error("Cover letter generation error:", error);
+      alert(`Error generating cover letter: ${error instanceof Error ? error.message : String(error)}`);
+      setGeneratedCoverLetter("Failed to generate cover letter. Please try again.");
+    } finally {
+      setIsGeneratingCoverLetter(false);
+    }
+  };
+
+  const handleCopyCoverLetter = () => {
+    navigator.clipboard.writeText(generatedCoverLetter)
+      .then(() => alert("Cover letter copied to clipboard!"))
+      .catch(err => alert("Failed to copy. Please copy manually."));
+  };
+
+  const handleDownloadCoverLetterTxt = () => {
+    const element = document.createElement("a");
+    const file = new Blob([generatedCoverLetter], { type: 'text/plain' });
+    element.href = URL.createObjectURL(file);
+    const safeCompanyName = targetCompanyName.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase() || "company";
+    const safeJobTitle = targetJobTitle.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase() || "job";
+    element.download = `cover_letter_${safeCompanyName}_${safeJobTitle}.txt`;
+    document.body.appendChild(element); // Required for this to work in FireFox
+    element.click();
+    document.body.removeChild(element);
+  };
 
 
-  
+
+
+
   return (
     <div className={`min-h-screen flex flex-col ${themeClasses.pageBg} transition-colors duration-300`}>
       <header className={`${themeClasses.headerBg} sticky top-0 z-50 shadow-md`}>
@@ -5035,72 +5515,85 @@ const handleDownloadPdf = async () => {
           <div className="flex items-center justify-between">
             {/* Back Button and Title Section */}
             <div className="flex items-center space-x-3">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className={`${themeClasses.text} ${themeClasses.buttonGhost}`}>
-                    <ArrowLeft className="w-5 h-5" />
-                </Button>
-                <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                        <FileText className="w-4 h-4 text-white" />
-                    </div>
-                    <span className={`text-lg font-semibold ${themeClasses.text} hidden sm:inline truncate max-w-[200px] md:max-w-xs`} title={title}>
-                        {title || "Loading title..."}
-                    </span>
+              <Button variant="ghost" size="icon" onClick={() => router.push('/dashboard')} className={`${themeClasses.text} ${themeClasses.buttonGhost}`}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <div className="flex items-center space-x-2">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                  <FileText className="w-4 h-4 text-white" />
                 </div>
+                <span className={`text-lg font-semibold ${themeClasses.text} hidden sm:inline truncate max-w-[200px] md:max-w-xs`} title={title}>
+                  {title || "Loading title..."}
+                </span>
+              </div>
             </div>
 
             {/* Progress Bar Section */}
             <div className="flex-grow px-4 sm:px-8 lg:px-16">
-                <div className="max-w-xl mx-auto">
-                    <div className="mb-1">
-                        <div className={`relative h-2 w-full overflow-hidden rounded-full ${themeClasses.progressBarBg}`}>
-                            <div
-                                className={`h-full w-full flex-1 ${themeClasses.accentGradient} transition-all`}
-                                style={{ transform: `translateX(-${100 - progressPercentage}%)` }}
-                            />
-                        </div>
-                    </div>
-                    <p className={`text-xs text-center ${themeClasses.textMuted}`}>
-                        Step {currentStep + 1} of {totalSteps}: {resumeSections[currentStep]}
-                    </p>
+              <div className="max-w-xl mx-auto">
+                <div className="mb-1">
+                  <div className={`relative h-2 w-full overflow-hidden rounded-full ${themeClasses.progressBarBg}`}>
+                    <div
+                      className={`h-full w-full flex-1 ${themeClasses.accentGradient} transition-all`}
+                      style={{ transform: `translateX(-${100 - progressPercentage}%)` }}
+                    />
+                  </div>
                 </div>
+                <p className={`text-xs text-center ${themeClasses.textMuted}`}>
+                  Step {currentStep + 1} of {totalSteps}: {resumeSections[currentStep]}
+                </p>
+              </div>
             </div>
 
             {/* Action Buttons Section */}
             <div className="flex items-center space-x-3">
-                <button 
-                    onClick={toggleTheme}
-                    className={`p-2 rounded-lg ${themeClasses.textMuted} ${themeClasses.buttonGhost} transition-colors`}
-                    aria-label="Toggle theme"
-                >
-                    {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSaveResume} 
+              <button
+                onClick={toggleTheme}
+                className={`p-2 rounded-lg ${themeClasses.textMuted} ${themeClasses.buttonGhost} transition-colors`}
+                aria-label="Toggle theme"
+              >
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveResume}
                 disabled={isSaving}
                 className={`${themeClasses.buttonOutline} flex items-center`}
               >
                 {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
                 {currentResumeIdInStore ? 'Save Changes' : 'Save Draft'}
               </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleDownloadPdf} 
-                  disabled={isGeneratingPdf || isSaving} // Disable if saving or generating PDF
-                  className={`${themeClasses.buttonOutline} flex items-center`}
-                >
-                  {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                  PDF
-                </Button>
-              <UserButton 
-                appearance={{ 
-                    elements: { 
-                        avatarBox: "w-9 h-9 shadow-md",
-                        userButtonPopoverCard: `${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`,
-                    } 
-                }} 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf || isSaving} // Disable if saving or generating PDF
+                className={`${themeClasses.buttonOutline} flex items-center`}
+              >
+                {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowCoverLetterModal(true)}
+                disabled={isSaving || isGeneratingPdf || !currentResumeIdInStore} // Disable if no resume saved yet
+                className={`${themeClasses.buttonOutline} flex items-center`}
+                title="Generate Cover Letter"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Cover Letter
+              </Button>
+
+
+              <UserButton
+                appearance={{
+                  elements: {
+                    avatarBox: "w-9 h-9 shadow-md",
+                    userButtonPopoverCard: `${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`,
+                  }
+                }}
               />
             </div>
           </div>
@@ -5144,40 +5637,97 @@ const handleDownloadPdf = async () => {
           <ResumePreview />
         </div>
 
-        {/* Hidden PDF Template for Download */}  
-         {showPdfPreviewForCapture && ( // This state variable controls if SimpleTemplate is rendered
-        <div style={{
+        {/* Hidden PDF Template for Download */}
+        {showPdfPreviewForCapture && ( // This state variable controls if SimpleTemplate is rendered
+          <div style={{
             position: 'absolute',
             left: '-9999px', // Way off-screen
             top: 'auto',
             width: '210mm',     // A4 width for layout consistency before capture
             backgroundColor: '#fff', // Ensures canvas doesn't have transparent background
-        }}>
+          }}>
             {/* This renders the div with id="resume-content-for-pdf" */}
             <SimpleTemplate resumeData={useResumeStore.getState()} />
-        </div>
-    )}
-      </main>
-    </div>
-  );
+          </div>
+        )}
+
+        {/* Cover Letter Modal */}
+        {showCoverLetterModal && (
+    <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4">
+        <div className={`${themeClasses.cardBg} rounded-xl p-6 sm:p-8 shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col`}>
+            <div className="flex justify-between items-center mb-6">
+                <h3 className={`text-xl font-semibold ${themeClasses.text}`}>Generate Cover Letter</h3>
+                <Button variant="ghost" size="icon" onClick={() => setShowCoverLetterModal(false)} className={themeClasses.textMuted}>X</Button>
+            </div>
+
+            <div className="space-y-4 mb-6 overflow-y-auto pr-2 styled-scrollbar flex-shrink min-h-[150px]">
+                 <div>
+                    <Label htmlFor="targetJobTitle" className={themeClasses.textMuted}>Target Job Title*</Label>
+                    <Input id="targetJobTitle" value={targetJobTitle} onChange={(e) => setTargetJobTitle(e.target.value)} placeholder="e.g., Senior Software Engineer" className="bg-slate-700/50 text-white placeholder-slate-400"/>
+                </div>
+                <div>
+                    <Label htmlFor="targetCompanyName" className={themeClasses.textMuted}>Target Company Name*</Label>
+                    <Input id="targetCompanyName" value={targetCompanyName} onChange={(e) => setTargetCompanyName(e.target.value)} placeholder="e.g., Google" className="bg-slate-700/50 text-white placeholder-slate-400"/>
+                </div>
+                <div>
+                    <Label htmlFor="specificPointsForCoverLetter" className={themeClasses.textMuted}>Key Points to Emphasize (Optional)</Label>
+                    <Textarea id="specificPointsForCoverLetter" value={specificPointsForCoverLetter} onChange={(e) => setSpecificPointsForCoverLetter(e.target.value)} placeholder="e.g., My experience with project X, my passion for Y" rows={3} className="bg-slate-700/50 text-white placeholder-slate-400"/>
+                </div>
+            </div>
+
+            <Button
+                onClick={handleGenerateCoverLetter}
+                disabled={isGeneratingCoverLetter || !targetJobTitle || !targetCompanyName}
+                className={`${themeClasses.accentGradient} text-white w-full mb-4 py-2.5`}
+            >
+                {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                Generate with AI
+            </Button>
+
+            {generatedCoverLetter && (
+                <div className="mt-4 border-t pt-4 border-slate-700 flex-grow flex flex-col overflow-hidden">
+                    <h4 className={`text-md font-semibold mb-2 ${themeClasses.text}`}>Generated Cover Letter:</h4>
+                    <Textarea
+                        value={generatedCoverLetter}
+                        readOnly
+                        rows={10}
+                        className="text-xs leading-relaxed whitespace-pre-wrap w-full flex-grow bg-slate-700/30 border-slate-600 text-gray-200 styled-scrollbar"
+                    />
+                    <div className="mt-3 flex space-x-2">
+                        <Button variant="outline" size="sm" onClick={handleCopyCoverLetter} className={themeClasses.buttonOutline}>
+                            <Copy size={14} className="mr-1.5"/> Copy Text
+                        </Button>
+                         <Button variant="outline" size="sm" onClick={handleDownloadCoverLetterTxt} className={themeClasses.buttonOutline}>
+                            <DownloadIcon size={14} className="mr-1.5"/> Download .txt
+                        </Button>
+                      </div>
+                  </div>
+              )}
+          </div>
+      </div>
+  )}
+  
+        </main>
+      </div>
+    );
 }
 
 // Default export wrapping content in Suspense
 export default function CreateResumePage() {
-    // The useTheme() hook cannot be called here directly as this is the top-level Server Component for the route.
-    // The Suspense fallback styling should ideally be simple and not rely on hooks.
-    // For a themed fallback, you might need a client component wrapper around Suspense itself
-    // or use CSS that respects the 'dark' class on <html>.
-    // A simple, un-themed loader is safer here for the outermost Suspense.
-    return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Basic fallback style */}
-                <Loader2 className="w-12 h-12 text-gray-700 dark:text-gray-300 animate-spin" />
-            </div>
-        }>
-            <CreateResumePageContent />
-        </Suspense>
-    );
+  // The useTheme() hook cannot be called here directly as this is the top-level Server Component for the route.
+  // The Suspense fallback styling should ideally be simple and not rely on hooks.
+  // For a themed fallback, you might need a client component wrapper around Suspense itself
+  // or use CSS that respects the 'dark' class on <html>.
+  // A simple, un-themed loader is safer here for the outermost Suspense.
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900"> {/* Basic fallback style */}
+        <Loader2 className="w-12 h-12 text-gray-700 dark:text-gray-300 animate-spin" />
+      </div>
+    }>
+      <CreateResumePageContent />
+    </Suspense>
+  );
 }
 </file>
 
