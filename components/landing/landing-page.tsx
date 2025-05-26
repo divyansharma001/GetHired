@@ -339,7 +339,7 @@ const LandingPageContent = () => {
         <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className={`inline-flex items-center ${isDark ? 'bg-emerald-800/30 text-emerald-300 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}> 
             <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div> 
-            AI-Powered to Pass ATS, Designed to Impress Humans.
+            Dominate ATS, Land Interviews 3x Faster.
           </div>
           
           <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}> 
