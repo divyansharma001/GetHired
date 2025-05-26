@@ -13,7 +13,7 @@ import {
     MailCheck
 } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
-import SlidingCompanies from './sliding-company';
+import SlidingTechStack from './sliding-techstack';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
@@ -281,7 +281,7 @@ const LandingPageContent = () => {
     >
         <nav className={`flex items-center justify-between px-4 sm:px-6 py-3 max-w-7xl mx-auto ${isDark ? 'bg-neutral-950/80' : 'bg-slate-50/80'} backdrop-blur-md sticky top-0 z-50 border-b ${themeClasses.border}`}>
           <Link href="/" className="flex items-center space-x-2"> <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md"> <MailCheck className="w-4 h-4 text-white" /> </div> <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent"> GetHired </span> </Link>
-          <div className="hidden md:flex items-center space-x-6"> <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Features</a> <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Pricing</a> <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Examples</a> <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Reviews</a> </div>
+          {/* <div className="hidden md:flex items-center space-x-6"> <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Features</a> <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Pricing</a> <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Examples</a> <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Reviews</a> </div> */}
           <div className="flex items-center space-x-3"> <button onClick={toggleTheme} className={`p-2 rounded-md ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`} aria-label="Toggle theme"> {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} </button> <Link href="/sign-in" className={`${themeClasses.textMuted} hover:${themeClasses.text} text-sm font-medium transition-colors`}> Sign in </Link> <Link href="/sign-up" className={`${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5`}> Get Started </Link> </div>
         </nav>
       
@@ -339,7 +339,7 @@ const LandingPageContent = () => {
         <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
           <div className={`inline-flex items-center ${isDark ? 'bg-emerald-800/30 text-emerald-300 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}> 
             <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div> 
-            Trusted by 150,000+ professionals worldwide 
+            AI-Powered to Pass ATS, Designed to Impress Humans.
           </div>
           
           <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}> 
@@ -377,8 +377,8 @@ const LandingPageContent = () => {
           
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '1s'}}> 
             {[
-              { value: '97%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-400' }, 
-              { value: '150K+', label: 'Resumes Created', icon: Users, color: 'text-blue-400' }, 
+              { value: '90%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-400' }, 
+              { value: '50+', label: 'Resumes Created', icon: Users, color: 'text-blue-400' }, 
               { value: '4.9/5', label: 'User Rating', icon: Star, color: 'text-yellow-400' }, 
               { value: '90s', label: 'Build Time', icon: Zap, color: 'text-purple-400' }
             ].map((stat, index) => ( 
@@ -400,7 +400,7 @@ const LandingPageContent = () => {
       </section>
       {/* ======== NEW HERO SECTION END ======== */}
 
-      <SlidingCompanies />
+      <SlidingTechStack />
 
       <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-28">
         <div className="text-center mb-16 sm:mb-20 animate-fade-in-up" style={{animationDelay: '0.1s'}}>

@@ -13,6 +13,7 @@ export const metadata: Metadata = {
   description: 'Build ATS-optimized resumes with AI assistance. Land interviews 3x faster with GetHired.',
 }
 
+
 export default function RootLayout({
   children,
 }: {
