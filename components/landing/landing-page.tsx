@@ -216,7 +216,7 @@ const LandingPageContent = () => {
     sectionBgGradient: isDark ? 'bg-gradient-to-br from-neutral-900 via-black to-indigo-950' : 'bg-gradient-to-br from-blue-50 via-white to-indigo-50', headlineText: isDark ? 'text-white' : 'text-neutral-900', subHeadlineText: isDark ? 'text-neutral-300' : 'text-neutral-600', secondaryButtonBorder: isDark ? 'border-neutral-600' : 'border-blue-500', secondaryButtonText: isDark ? 'text-neutral-200' : 'text-blue-600', secondaryButtonHoverBg: isDark ? 'hover:bg-neutral-800' : 'hover:bg-blue-100', secondaryButtonHoverText: isDark ? 'hover:text-white' : 'hover:text-blue-700', smallPrintText: isDark ? 'text-neutral-500' : 'text-blue-700 opacity-80', animatedBlur1: isDark ? 'bg-indigo-700/10' : 'bg-blue-300/20', animatedBlur2: isDark ? 'bg-purple-700/5' : 'bg-indigo-300/10',
   };
 
-  const handleWatchDemo = () => { alert("Watch Demo functionality to be implemented!"); };
+  const handleWatchDemo = () => { alert("Coming Soon"); };
   const threeStepsData = [ 
     { step: '01', Icon: LogIn, title: 'Upload or Start Fresh', description: 'Easily import data from an existing resume or LinkedIn, or begin with a clean, professional template.' }, { step: '02', Icon: Edit2, title: 'AI-Powered Refinement', description: 'Our intelligent assistant helps you craft compelling content, suggests keywords, and optimizes for ATS.' }, { step: '03', Icon: DownloadCloud, title: 'Download & Apply', description: 'Export your perfectly polished resume in multiple formats and confidently apply to your dream roles.' }
   ];
@@ -371,7 +371,7 @@ const LandingPageContent = () => {
                 <div className="absolute inset-0 rounded-full bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors duration-300"></div>
                 <Play className="w-4 h-4 relative z-10" /> 
               </div> 
-              Watch Demo (2 min) 
+              Watch Demo (Coming Soon)
             </button> 
           </div>
           
