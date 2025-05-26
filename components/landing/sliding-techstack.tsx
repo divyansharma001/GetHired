@@ -1,6 +1,4 @@
 import React from 'react';
-import { useTheme } from '@/context/theme-provider';
-import { cn } from '@/lib/utils';
 
 // Define a type for our tech stack items
 interface TechStackItem {
@@ -10,8 +8,8 @@ interface TechStackItem {
 }
 
 const SlidingTechStack = () => {
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
+  // Using a simple dark theme for demonstration
+  const isDark = true;
 
   const themeClasses = {
     bg: isDark 
@@ -37,11 +35,7 @@ const SlidingTechStack = () => {
   ];
 
   return (
-    <section className={cn(
-        themeClasses.bg,
-        "py-16 sm:py-20 relative overflow-hidden"
-      )}
-    >
+    <section className={`${themeClasses.bg} py-16 sm:py-20 relative overflow-hidden`}>
       {/* Subtle grid pattern background */}
       <div className="absolute inset-0 opacity-20">
         <div 
@@ -54,67 +48,32 @@ const SlidingTechStack = () => {
       </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
-        {/* Header section matching your landing page style */}
+        {/* Header section */}
         <div className="text-center mb-16">
-          <div className={cn(
-            "inline-flex items-center px-4 py-2 rounded-full mb-6",
-            "bg-gradient-to-r from-blue-500/10 to-purple-500/10",
-            "border border-blue-500/20 backdrop-blur-sm"
-          )}>
+          <div className="inline-flex items-center px-4 py-2 rounded-full mb-6 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/20 backdrop-blur-sm">
             <div className="w-2 h-2 bg-green-500 rounded-full mr-3 animate-pulse" />
-            <span className={cn(
-              "text-sm font-medium",
-              themeClasses.textMuted
-            )}>
+            <span className={`text-sm font-medium ${themeClasses.textMuted}`}>
               Enterprise-Grade Technology Stack
             </span>
           </div>
           
-          {/* <h2 className={cn(
-            "text-3xl sm:text-4xl lg:text-5xl font-bold mb-6",
-            themeClasses.textPrimary
-          )}>
-            Built with technologies that{' '}
-            <span className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
-              power enterprise solutions
-            </span>
-          </h2> */}
-          
-          <p className={cn(
-            "text-lg max-w-3xl mx-auto leading-relaxed",
-            themeClasses.textMuted
-          )}>
+          <p className={`text-lg max-w-3xl mx-auto leading-relaxed ${themeClasses.textMuted}`}>
             Our platform leverages cutting-edge technologies and frameworks trusted by Fortune 500 companies 
             to deliver unmatched performance, security, and scalability.
           </p>
         </div>
         
-        {/* Tech stack slider */}
+        {/* Tech stack slider - Much faster animation */}
         <div className="relative group mb-16">
-          <div className="flex animate-slide items-center">
-            {[...techStack, ...techStack].map((tech, index) => (
+          <div className="flex animate-slide-fast items-center will-change-transform">
+            {[...techStack, ...techStack, ...techStack].map((tech, index) => (
               <div 
                 key={`${tech.name}-${index}`} 
                 title={tech.name}
-                className={cn(
-                  "flex-shrink-0 mx-8 sm:mx-10 lg:mx-12",
-                  "group/item cursor-pointer transition-all duration-500",
-                  "hover:scale-110"
-                )}
+                className="flex-shrink-0 mx-6 sm:mx-8 lg:mx-10 group/item cursor-pointer transition-transform duration-300 hover:scale-110"
               >
-                <div className={cn(
-                  "px-6 py-3 rounded-xl transition-all duration-500",
-                  "border border-transparent",
-                  "hover:border-blue-500/30 hover:bg-blue-500/5",
-                  "backdrop-blur-sm"
-                )}>
-                  <span className={cn(
-                    "text-xl sm:text-2xl lg:text-3xl font-semibold",
-                    "bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent",
-                    "transition-all duration-500",
-                    "whitespace-nowrap font-inter tracking-tight",
-                    "group-hover/item:tracking-wide"
-                  )}>
+                <div className="px-6 py-3 rounded-xl transition-all duration-300 border border-transparent hover:border-blue-500/30 hover:bg-blue-500/5 backdrop-blur-sm">
+                  <span className="text-xl sm:text-2xl lg:text-3xl font-semibold bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent whitespace-nowrap font-inter tracking-tight">
                     {tech.displayName || tech.name}
                   </span>
                 </div>
@@ -122,80 +81,30 @@ const SlidingTechStack = () => {
             ))}
           </div>
         </div>
-        
-        {/* Stats section similar to your landing page */}
-        {/* <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
-          {[
-            { 
-              value: "99.9%", 
-              label: "Uptime", 
-              icon: "📈",
-              color: "text-green-400"
-            },
-            { 
-              value: "50ms", 
-              label: "Response Time", 
-              icon: "⚡",
-              color: "text-blue-400"
-            },
-            { 
-              value: "10M+", 
-              label: "Requests/Day", 
-              icon: "🚀",
-              color: "text-purple-400"
-            },
-            { 
-              value: "A+", 
-              label: "Security Grade", 
-              icon: "🛡️",
-              color: "text-yellow-400"
-            }
-          ].map((stat, index) => (
-            <div 
-              key={index}
-              className={cn(
-                "text-center p-6 rounded-2xl",
-                themeClasses.cardBg,
-                themeClasses.border,
-                "border transition-all duration-300",
-                "hover:border-blue-500/30 hover:bg-blue-500/5"
-              )}
-            >
-              <div className="text-2xl mb-2">{stat.icon}</div>
-              <div className={cn(
-                "text-2xl sm:text-3xl font-bold mb-1",
-                stat.color
-              )}>
-                {stat.value}
-              </div>
-              <div className={cn(
-                "text-sm font-medium",
-                themeClasses.textMuted
-              )}>
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </div> */}
       </div>
       
       <style jsx>{`
-        @keyframes slide {
+        @keyframes slide-fast {
           0% {
             transform: translateX(0);
           }
           100% {
-            transform: translateX(-50%); 
+            transform: translateX(-33.333%); 
           }
         }
         
-        .animate-slide {
-          animation: slide 50s linear infinite; 
+        .animate-slide-fast {
+          animation: slide-fast 15s linear infinite; 
         }
         
         /* Pause animation on hover */
-        .relative.group:hover .animate-slide { 
+        .relative.group:hover .animate-slide-fast { 
           animation-play-state: paused;
+        }
+        
+        /* Performance optimizations */
+        .will-change-transform {
+          will-change: transform;
         }
         
         /* Smooth backdrop blur */
