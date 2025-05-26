@@ -136,7 +136,8 @@ const bentoFeaturesData = [
     description: "Gain instant access to your resume's ATS score with our real-time analytics. Make informed decisions with up-to-the-minute information and actionable suggestions.",
     href: "#feature-ats",
     ctaText: "Analyze My Resume",
-    className: "col-span-2 md:col-span-2 lg:col-span-2 row-span-2",
+    // MODIFIED className for responsiveness
+    className: "col-span-1 md:col-span-2 lg:col-span-2 row-span-2",
     isHero: true,
     backgroundContent: (
       <div className="absolute inset-0 flex items-end justify-center p-4 md:p-8 opacity-40 group-hover:opacity-60 transition-opacity">
@@ -154,7 +155,7 @@ const bentoFeaturesData = [
     description: "Categorize and monitor your resume sections with our AI. Optimize wording and bullet points without lifting a finger.",
     href: "#feature-ai",
     ctaText: "Enhance My Content",
-    className: "col-span-1",
+    className: "col-span-1", // This will correctly span 1/1 on mobile, 1/2 on md, 1/3 on lg (if applicable)
     backgroundContent: (
       <div className="absolute inset-0 flex flex-col items-start justify-end p-4 md:p-6 space-y-2 opacity-30 group-hover:opacity-50">
         {[1, 2, 3].map(i => (
@@ -169,7 +170,7 @@ const bentoFeaturesData = [
     description: "Download your ATS-optimized resume in PDF, DOCX, or TXT. Share with a unique link and track views.",
     href: "#feature-export",
     ctaText: "Download Now",
-    className: "col-span-1",
+    className: "col-span-1", // This will correctly span 1/1 on mobile, 1/2 on md, 1/3 on lg (if applicable)
   backgroundContent: (
       <div className="absolute inset-0 flex items-center justify-around p-4 opacity-20 group-hover:opacity-30">
         <FileTextIconLucide className="w-12 h-12 text-purple-500/50 transform -rotate-6" />
@@ -415,7 +416,8 @@ const LandingPageContent = () => {
         </div>
         
         <BentoGrid 
-          className="grid-cols-1 md:grid-cols-3 lg:grid-cols-3 auto-rows-[18rem] sm:auto-rows-[19rem] md:auto-rows-[20rem]"
+          // MODIFIED className for responsiveness: md:grid-cols-2 instead of md:grid-cols-3
+          className="grid-cols-1 md:grid-cols-2 lg:grid-cols-3 auto-rows-[18rem] sm:auto-rows-[19rem] md:auto-rows-[20rem]"
         >
           {displayedBentoFeatures.map((feature, idx) => (
             <BentoCard 

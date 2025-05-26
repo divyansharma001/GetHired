@@ -1222,416 +1222,6 @@ const ResumeForm: React.FC<ResumeFormProps> = ({ currentStep }) => {
 export default ResumeForm;
 </file>
 
-<file path="components/resume/sections/education.tsx">
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// components/resume/sections/education.tsx
-'use client';
-import React, { useEffect } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useResumeStore } from '@/hooks/use-resume';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { EducationEntry } from '@/types/resume';
-import { PlusCircle, Trash2, CalendarDays } from 'lucide-react';
-import { useTheme } from '@/context/theme-provider'; // Import useTheme
-import { cn } from '@/lib/utils'; // Import cn
-
-const educationEntrySchema = z.object({
-  id: z.string(),
-  institution: z.string().min(1, "Institution name is required"),
-  degree: z.string().min(1, "Degree is required"),
-  field: z.string().min(1, "Field of study is required"),
-  startDate: z.string().min(4, "Start date is required (e.g., YYYY or YYYY-MM)"),
-  endDate: z.string().min(4, "End date is required (e.g., YYYY, YYYY-MM or Present)"),
-  gpa: z.string().optional(),
-  achievements: z.string().optional(),
-});
-
-const educationSchema = z.object({
-  education: z.array(educationEntrySchema),
-});
-
-type EducationFormData = z.infer<typeof educationSchema>;
-
-// Define AppTheme directly for this component (or import from a central config)
-function getAppTheme(isDark: boolean) {
-  return {
-    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
-    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
-    errorText: isDark ? 'text-red-400' : 'text-red-500',
-    // Styles for individual entry cards/sections
-    entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
-    entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
-    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
-  };
-}
-
-const EducationSection: React.FC = () => {
-  const { education, updateEducation: updateStoreEducation, addEducation: addStoreEducation, removeEducation: removeStoreEducation } = useResumeStore();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  const appTheme = getAppTheme(isDark);
-
-  const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<EducationFormData>({
-    resolver: zodResolver(educationSchema),
-    defaultValues: { education: [] }, // Initialize with empty array, then populate via useEffect
-  });
-
-  useEffect(() => {
-    // Populate RHF with data from Zustand store when component mounts or store data changes
-    const storeEducation = education.map(edu => ({
-      ...edu,
-      achievements: edu.achievements?.join('\n') || '',
-    }));
-    reset({ education: storeEducation });
-  }, [education, reset]);
-
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "education",
-  });
-
-  useEffect(() => {
-    const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.education) { // Only update store on actual field changes
-        value.education.forEach((eduData, index) => {
-          if (eduData && fields[index]) { // Ensure field exists
-            const achievementsArray = eduData.achievements?.split('\n').filter(ach => ach.trim() !== '');
-            // Ensure ID is preserved from RHF 'fields' if `eduData.id` is undefined (can happen if RHF adds temp ID)
-            const idToUpdate = eduData.id || fields[index].id;
-            updateStoreEducation(index, { ...eduData, id: idToUpdate, achievements: achievementsArray });
-          }
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, updateStoreEducation, fields]);
-
-  const handleAddEducation = () => {
-    const newId = addStoreEducation(); // Add to store, get new ID
-    append({ 
-      id: newId, // Use the ID from the store
-      institution: '', 
-      degree: '', 
-      field: '', 
-      startDate: '', 
-      endDate: '', 
-      gpa: '', 
-      achievements: '' 
-    });
-  };
-
-  const handleRemoveEducation = (index: number) => {
-    const eduIdToRemove = fields[index].id;
-    removeStoreEducation(eduIdToRemove); // Remove from Zustand store by actual ID
-    remove(index); // Remove from RHF field array
-  };
-
-  return (
-    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}> {/* Added dummy onSubmit to satisfy RHF */}
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
-        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Education</h2>
-        <Button type="button" variant="outline" size="sm" onClick={handleAddEducation}>
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Add Education
-        </Button>
-      </div>
-
-      {fields.length > 0 ? (
-        <div className="space-y-6">
-          {fields.map((item, index) => (
-            <div 
-              key={item.id} 
-              className={cn(
-                "p-5 sm:p-6 rounded-xl border space-y-5 sm:space-y-6 relative",
-                appTheme.entryCardBg,
-                appTheme.entryCardBorder
-              )}
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveEducation(index)}
-                className="absolute top-3 right-3 text-red-400 hover:text-destructive hover:bg-destructive/10 w-8 h-8"
-                aria-label="Remove education entry"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-              
-              {/* RHF Controller does not need register for id, it's part of the field object */}
-              {/* <input type="hidden" {...register(`education.${index}.id`)} /> */}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div>
-                  <Label htmlFor={`education.${index}.institution`}>Institution Name</Label>
-                  <Input id={`education.${index}.institution`} {...register(`education.${index}.institution`)} placeholder="e.g., University of Example" />
-                  {errors.education?.[index]?.institution && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.institution?.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor={`education.${index}.degree`}>Degree</Label>
-                  <Input id={`education.${index}.degree`} {...register(`education.${index}.degree`)} placeholder="e.g., Bachelor of Science" />
-                  {errors.education?.[index]?.degree && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.degree?.message}</p>}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor={`education.${index}.field`}>Field of Study / Major</Label>
-                <Input id={`education.${index}.field`} {...register(`education.${index}.field`)} placeholder="e.g., Computer Science" />
-                {errors.education?.[index]?.field && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.field?.message}</p>}
-              </div>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div>
-                  <Label htmlFor={`education.${index}.startDate`}>Start Date</Label>
-                  <div className="relative">
-                    <Input id={`education.${index}.startDate`} {...register(`education.${index}.startDate`)} placeholder="YYYY or YYYY-MM" className="pr-10" />
-                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                  </div>
-                  {errors.education?.[index]?.startDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.startDate?.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor={`education.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
-                  <div className="relative">
-                    <Input id={`education.${index}.endDate`} {...register(`education.${index}.endDate`)} placeholder="YYYY, YYYY-MM or Present" className="pr-10" />
-                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                  </div>
-                  {errors.education?.[index]?.endDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.endDate?.message}</p>}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor={`education.${index}.gpa`}>GPA (Optional)</Label>
-                <Input id={`education.${index}.gpa`} {...register(`education.${index}.gpa`)} placeholder="e.g., 3.8/4.0" />
-              </div>
-
-              <div>
-                <Label htmlFor={`education.${index}.achievements`}>Key Achievements/Coursework (Optional - one per line)</Label>
-                <Textarea
-                  id={`education.${index}.achievements`}
-                  {...register(`education.${index}.achievements`)}
-                  rows={3}
-                  placeholder="e.g., Dean's List, Relevant projects, Thesis title"
-                />
-                <p className={cn("text-xs mt-2", appTheme.textMuted)}>List key accomplishments or relevant coursework. Each on a new line for bullet points in the resume.</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
-          <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
-          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No education entries added yet.</p>
-          <p className={cn("text-sm", appTheme.textMuted)}>Click &quot;Add Education&quot; to start building your academic history.</p>
-        </div>
-      )}
-    </form>
-  );
-};
-
-export default EducationSection;
-</file>
-
-<file path="components/resume/sections/skills.tsx">
-// components/resume/sections/skills.tsx
-'use client';
-import React, { useEffect } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useResumeStore } from '@/hooks/use-resume';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { Select } from '@/components/ui/select';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { SkillEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Lightbulb, Star } from 'lucide-react'; // Added Star for proficiency
-import { useTheme } from '@/context/theme-provider';
-import { cn } from '@/lib/utils';
-
-const skillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
-const skillCategories = ['Technical', 'Soft', 'Language', 'Other'] as const; // Match SkillEntry type
-
-const skillEntrySchema = z.object({
-  id: z.string(),
-  name: z.string().min(1, "Skill name is required"),
-  level: z.enum(skillLevels),
-  category: z.enum(skillCategories),
-});
-
-const skillsSchema = z.object({
-  skills: z.array(skillEntrySchema),
-});
-
-type SkillsFormData = z.infer<typeof skillsSchema>;
-
-// Define AppTheme (or import from a central config)
-function getAppTheme(isDark: boolean) {
-  return {
-    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
-    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
-    errorText: isDark ? 'text-red-400' : 'text-red-500',
-    entryCardBg: isDark ? 'bg-neutral-700/40' : 'bg-slate-100', // Slightly more subtle for skills
-    entryCardBorder: isDark ? 'border-neutral-600/60' : 'border-slate-300',
-    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    tipBoxBg: isDark ? 'bg-blue-900/20 border-blue-500/30' : 'bg-blue-50 border-blue-200',
-    tipBoxText: isDark ? 'text-blue-300' : 'text-blue-700',
-  };
-}
-
-
-const SkillsSection: React.FC = () => {
-  const { skills, updateSkill: updateStoreSkill, addSkill: addStoreSkill, removeSkill: removeStoreSkill } = useResumeStore();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  const appTheme = getAppTheme(isDark);
-
-  const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<SkillsFormData>({
-    resolver: zodResolver(skillsSchema),
-    defaultValues: { skills: [] },
-  });
-
-  useEffect(() => {
-    reset({ skills: skills || [] }); // Populate RHF from store
-  }, [skills, reset]);
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "skills",
-  });
-
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.skills) {
-        value.skills.forEach((skillData, index) => {
-          if (skillData && fields[index]) {
-            const idToUpdate = skillData.id || fields[index].id;
-            updateStoreSkill(index, { ...skillData, id: idToUpdate });
-          }
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, updateStoreSkill, fields]);
-
-  const handleAddSkill = () => {
-    const newId = addStoreSkill();
-    append({ 
-      id: newId, 
-      name: '', 
-      level: 'Intermediate', 
-      category: 'Technical' 
-    });
-  };
-  
-  const handleRemoveSkill = (index: number) => {
-    const skillIdToRemove = fields[index].id;
-    removeStoreSkill(skillIdToRemove);
-    remove(index);
-  };
-
-  return (
-    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
-        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Skills</h2>
-        <Button type="button" variant="outline" size="sm" onClick={handleAddSkill}>
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Add Skill
-        </Button>
-      </div>
-      
-      <div className={cn("p-4 rounded-lg border flex items-start space-x-3", appTheme.tipBoxBg)}>
-        <Lightbulb className={cn("w-5 h-5 mt-0.5 shrink-0", appTheme.tipBoxText)} />
-        <p className={cn("text-sm", appTheme.tipBoxText)}>
-          Showcase a mix of technical, soft, and tool-specific skills. Tailor these to the job descriptions you&apos;re targeting for best ATS compatibility.
-        </p>
-      </div>
-
-      {fields.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {fields.map((item, index) => (
-            <div 
-                key={item.id} 
-                className={cn(
-                    "p-4 rounded-lg border space-y-4 relative", // Reduced padding for skill cards
-                    appTheme.entryCardBg,
-                    appTheme.entryCardBorder
-                )}
-            >
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleRemoveSkill(index)}
-                    className="absolute top-2 right-2 text-red-400 hover:text-destructive hover:bg-destructive/10 w-7 h-7"
-                    aria-label="Remove skill entry"
-                >
-                    <Trash2 className="w-3.5 h-3.5" />
-                </Button>
-                
-                <div>
-                    <Label htmlFor={`skills.${index}.name`}>Skill Name</Label>
-                    <Input id={`skills.${index}.name`} {...register(`skills.${index}.name`)} placeholder="e.g., JavaScript" />
-                    {errors.skills?.[index]?.name && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.skills[index]?.name?.message}</p>}
-                </div>
-
-                <div>
-                    <Label htmlFor={`skills.${index}.level`}>Proficiency Level</Label>
-                    <div className="relative">
-                        <Controller
-                            name={`skills.${index}.level`}
-                            control={control}
-                            render={({ field }) => (
-                                <Select id={`skills.${index}.level`} {...field} className="pr-10">
-                                    {skillLevels.map(level => <option key={level} value={level}>{level}</option>)}
-                                </Select>
-                            )}
-                        />
-                        <Star className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                    </div>
-                    {errors.skills?.[index]?.level && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.skills[index]?.level?.message}</p>}
-                </div>
-                
-                <div>
-                    <Label htmlFor={`skills.${index}.category`}>Category</Label>
-                     <Controller
-                        name={`skills.${index}.category`}
-                        control={control}
-                        render={({ field }) => (
-                            <Select id={`skills.${index}.category`} {...field}>
-                                {skillCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                            </Select>
-                        )}
-                    />
-                    {errors.skills?.[index]?.category && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.skills[index]?.category?.message}</p>}
-                </div>
-            </div>
-            ))}
-        </div>
-      ) : (
-        <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
-          <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
-          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No skills added yet.</p>
-          <p className={cn("text-sm", appTheme.textMuted)}>Highlight your expertise by adding relevant skills.</p>
-        </div>
-      )}
-    </form>
-  );
-};
-
-export default SkillsSection;
-</file>
-
 <file path="components/ui/button.tsx">
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
@@ -2979,227 +2569,10 @@ const ResumePreview: React.FC = () => {
 export default ResumePreview;
 </file>
 
-<file path="components/resume/sections/personal-info.tsx">
-// components/resume/sections/personal-info.tsx
+<file path="components/resume/sections/education.tsx">
+// components/resume/sections/education.tsx
 'use client';
-import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useResumeStore } from '@/hooks/use-resume';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-import { PersonalInfo } from '@/types/resume';
-import { Sparkles, Loader2 } from 'lucide-react';
-import { useTheme } from '@/context/theme-provider'; // Import useTheme
-import { cn } from '@/lib/utils'; // Import cn
-
-// Zod schema for validation (remains the same)
-const personalInfoSchema = z.object({
-  firstName: z.string().min(1, "First name is required"),
-  lastName: z.string().min(1, "Last name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(1, "Phone number is required"),
-  location: z.string().min(1, "Location is required"),
-  linkedin: z.string().url().optional().or(z.literal('')),
-  website: z.string().url().optional().or(z.literal('')),
-  summary: z.string().min(20, "Summary should be at least 20 characters").max(1000, "Summary too long"),
-});
-
-// Define AppTheme directly for this component (or import from a central config)
-function getAppTheme(isDark: boolean) {
-  return {
-    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
-    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
-    aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
-    errorText: isDark ? 'text-red-400' : 'text-red-500',
-  };
-}
-
-const PersonalInfoSection: React.FC = () => {
-  const { personalInfo, updatePersonalInfo } = useResumeStore();
-  const { theme } = useTheme(); // Get theme
-  const isDark = theme === 'dark';
-  const appTheme = getAppTheme(isDark); // Get themed classes
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { control, handleSubmit, formState: { errors }, watch, setValue } = useForm<PersonalInfo>({
-    resolver: zodResolver(personalInfoSchema),
-    defaultValues: personalInfo,
-  });
-
-  // In PersonalInfoSection.tsx
-useEffect(() => {
-  const subscription = watch((formValues, { name, type }) => {
-    // Only proceed if it's an actual change event and a specific field was changed
-    if (type === 'change' && name) {
-      // Compare with current store state before updating to prevent unnecessary updates
-      // This requires getting the current store state here, or being more selective
-      // For simplicity now, we'll just update. A more robust check would compare.
-      
-      // Construct the payload carefully based on what changed.
-      // If `formValues` is the whole PersonalInfo object from RHF:
-      if (name && name.startsWith("firstName") || name.startsWith("lastName") /* etc. for all fields in PersonalInfo */) {
-         // A simple way for non-array sections:
-         // Check if the new formValues.personalInfo (if your form is structured that way)
-         // is different from the store's personalInfo before calling update.
-         // However, `formValues` in watch is the entire form object.
-         // `value` passed to updatePersonalInfo should be just the PersonalInfo part.
-
-         // Let's assume `formValues` is the PersonalInfo object for this form scope.
-         const currentStoreInfo = useResumeStore.getState().personalInfo;
-         if (JSON.stringify(formValues) !== JSON.stringify(currentStoreInfo)) { // Deep compare (can be costly for large objects)
-            updatePersonalInfo(formValues as PersonalInfo);
-         }
-      }
-    }
-  });
-  return () => subscription.unsubscribe();
-}, [watch, updatePersonalInfo]);
-
-
-
-  useEffect(() => {
-    const subscription = watch((value) => {
-      updatePersonalInfo(value as PersonalInfo);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, updatePersonalInfo]);
-
-  const [isEnhancingSummary, setIsEnhancingSummary] = useState(false);
-
-  const handleAiEnhanceSummary = async () => {
-    const currentSummaryValue = watch("summary");
-    const resumeTitle = useResumeStore.getState().title; // Get current resume title for context
-
-    if (!currentSummaryValue || currentSummaryValue.trim().length < 10) {
-      alert("Please write a brief summary first (at least 10 characters).");
-      return;
-    }
-    setIsEnhancingSummary(true);
-    try {
-      const response = await fetch('/api/ai/enhance-summary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-            currentSummary: currentSummaryValue,
-            resumeTitle: resumeTitle // Pass resume title
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `AI summary enhancement failed: ${response.statusText}`);
-      }
-      const { enhancedSummary } = await response.json();
-      setValue("summary", enhancedSummary, { shouldDirty: true, shouldValidate: true });
-      // Consider using a toast notification instead of alert
-      alert("Summary enhanced by AI! Please review.");
-    } catch (error) {
-      console.error("AI Summary Enhancement error:", error);
-      alert(`AI Summary Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setIsEnhancingSummary(false);
-    }
-  };
-
-  return (
-    <form className="space-y-6 sm:space-y-8"> {/* Increased spacing for larger screens */}
-      <h2 className={cn("text-xl sm:text-2xl font-semibold border-b pb-4 mb-6 sm:mb-8", appTheme.textHeading, appTheme.borderSecondary)}>
-        Personal Information
-      </h2>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 sm:gap-y-6">
-        <div>
-            <Label htmlFor="firstName">First Name</Label>
-            <Controller name="firstName" control={control} render={({ field }) => <Input id="firstName" {...field} placeholder="e.g., John"/>}/>
-            {errors.firstName && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.firstName.message}</p>}
-        </div>
-        <div>
-            <Label htmlFor="lastName">Last Name</Label>
-            <Controller name="lastName" control={control} render={({ field }) => <Input id="lastName" {...field} placeholder="e.g., Doe"/>}/>
-            {errors.lastName && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.lastName.message}</p>}
-        </div>
-        <div>
-            <Label htmlFor="email">Email Address</Label>
-            <Controller name="email" control={control} render={({ field }) => <Input id="email" type="email" {...field} placeholder="e.g., john.doe@example.com"/>}/>
-            {errors.email && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.email.message}</p>}
-        </div>
-        <div>
-            <Label htmlFor="phone">Phone Number</Label>
-            <Controller name="phone" control={control} render={({ field }) => <Input id="phone" type="tel" {...field} placeholder="e.g., (123) 456-7890"/>}/>
-            {errors.phone && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.phone.message}</p>}
-        </div>
-      </div>
-
-      <div>
-        <Label htmlFor="location">Location</Label>
-        <Controller name="location" control={control} render={({ field }) => <Input id="location" {...field} placeholder="e.g., San Francisco, CA"/>}/>
-        {errors.location && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.location.message}</p>}
-      </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 sm:gap-y-6">
-        <div>
-            <Label htmlFor="linkedin">LinkedIn Profile URL (Optional)</Label>
-            <Controller name="linkedin" control={control} render={({ field }) => <Input id="linkedin" {...field} placeholder="e.g., linkedin.com/in/johndoe"/>}/>
-            {errors.linkedin && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.linkedin.message}</p>}
-        </div>
-        <div>
-            <Label htmlFor="website">Personal Website/Portfolio (Optional)</Label>
-            <Controller name="website" control={control} render={({ field }) => <Input id="website" {...field} placeholder="e.g., johndoe.com"/>}/>
-            {errors.website && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.website.message}</p>}
-        </div>
-      </div>
-      
-      <div>
-        <div className="flex justify-between items-center mb-1.5">
-            <Label htmlFor="summary">Professional Summary</Label>
-            <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={handleAiEnhanceSummary}
-                disabled={isEnhancingSummary}
-                className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)} // Ensure flex and items-center
-            >
-                {isEnhancingSummary ? (
-                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                ) : (
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
-                )}
-                AI Enhance
-            </Button>
-        </div>
-        <Controller
-          name="summary"
-          control={control}
-          render={({ field }) => (
-            <Textarea
-              id="summary"
-              {...field}
-              rows={5}
-              placeholder="A brief, compelling overview of your skills, experience, and career goals (2-4 sentences recommended)..."
-            />
-          )}
-        />
-        {errors.summary && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.summary.message}</p>}
-        <p className={cn("text-xs mt-2", appTheme.textMuted)}>
-            Tip: Tailor this summary to the type of roles you&apos;re targeting. Highlight your most relevant qualifications.
-        </p>
-      </div>
-    </form>
-  );
-};
-
-export default PersonalInfoSection;
-</file>
-
-<file path="components/resume/sections/projects.tsx">
-// components/resume/sections/projects.tsx
-'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -3209,28 +2582,28 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ProjectEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Link as LinkIcon, Github, Sparkles, Loader2, Briefcase } from 'lucide-react'; // Added Briefcase for tip
+import { PlusCircle, Trash2, CalendarDays } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
 
-const projectEntrySchema = z.object({
+const educationEntrySchema = z.object({
   id: z.string(),
-  name: z.string().min(1, "Project name is required"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(1000, "Description too long."),
-  technologies: z.string().min(1, "List at least one technology (comma-separated)"),
-  url: z.string().url("Please enter a valid URL (e.g., https://example.com)").optional().or(z.literal('')),
-  github: z.string().url("Please enter a valid GitHub URL").optional().or(z.literal('')),
+  institution: z.string().min(1, "Institution name is required"),
+  degree: z.string().min(1, "Degree is required"),
+  field: z.string().min(1, "Field of study is required"),
+  startDate: z.string().min(4, "Start date is required (e.g., YYYY or YYYY-MM)"),
+  endDate: z.string().min(4, "End date is required (e.g., YYYY, YYYY-MM or Present)"),
+  gpa: z.string().optional(),
+  achievements: z.string().optional(),
 });
 
-const projectsSchema = z.object({
-  projects: z.array(projectEntrySchema),
+const educationSchema = z.object({
+  education: z.array(educationEntrySchema),
 });
 
-type ProjectsFormData = z.infer<typeof projectsSchema>;
+type EducationFormData = z.infer<typeof educationSchema>;
 
-// Define AppTheme (or import from a central config)
 function getAppTheme(isDark: boolean) {
   return {
     textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
@@ -3240,125 +2613,121 @@ function getAppTheme(isDark: boolean) {
     entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
     entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
     iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
-    tipBoxBg: isDark ? 'bg-green-900/20 border-green-500/30' : 'bg-green-50 border-green-200', // Different tip color
-    tipBoxText: isDark ? 'text-green-300' : 'text-green-700',
   };
 }
 
-const ProjectsSection: React.FC = () => {
-  const { projects, updateProject: updateStoreProject, addProject: addStoreProject, removeProject: removeStoreProject } = useResumeStore();
+const EducationSection: React.FC = () => {
+  const { 
+    education: storeEducation, 
+    updateEducation: updateStoreEducation, 
+    addEducation: addStoreEducation, 
+    removeEducation: removeStoreEducation 
+  } = useResumeStore();
+  
   const { theme } = useTheme();
   const isDark = theme === 'dark';
   const appTheme = getAppTheme(isDark);
-  const resumeTitle = useResumeStore(state => state.title); // For AI context
 
-  const { control, register, handleSubmit, watch, formState: { errors }, setValue, reset } = useForm<ProjectsFormData>({
-    resolver: zodResolver(projectsSchema),
-    defaultValues: { projects: [] },
+  const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<EducationFormData>({
+    resolver: zodResolver(educationSchema),
+    defaultValues: { 
+      education: storeEducation.map(edu => ({
+        ...edu,
+        achievements: edu.achievements?.join('\n') || '',
+      })) 
+    },
   });
-
-  useEffect(() => {
-    const storeProjects = projects.map(proj => ({
-      ...proj,
-      technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
-    }));
-    reset({ projects: storeProjects });
-  }, [projects, reset]);
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "projects",
+    name: "education",
   });
 
   useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const storeEducationForRHF = storeEducation.map(edu => ({
+      ...edu,
+      achievements: edu.achievements?.join('\n') || '',
+    }));
+    if (JSON.stringify(storeEducationForRHF) !== JSON.stringify(watch("education"))) {
+      reset({ education: storeEducationForRHF });
+    }
+  }, [storeEducation, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (educationArrayFromForm: EducationFormData['education']) => {
+      educationArrayFromForm.forEach((eduData, index) => {
+        const achievementsArray = eduData.achievements?.split('\n').filter(ach => ach.trim() !== '') || [];
+        const idToUpdate = eduData.id || (fields[index] ? fields[index].id : undefined);
+        
+        if (idToUpdate) {
+            // Check if store action needs index or if it can find by ID
+            // Assuming updateStoreEducation finds by index if using original store's updateEducation(index, data)
+            // Or if it finds by ID, pass the ID
+            // Current updateStoreEducation(index, data) is fine here.
+            updateStoreEducation(index, { ...eduData, id: idToUpdate, achievements: achievementsArray });
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
     const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.projects) {
-        value.projects.forEach((projData, index) => {
-          if (projData && fields[index]) {
-            const techArray = typeof projData.technologies === 'string'
-              ? projData.technologies.split(',').map(t => t.trim()).filter(t => t)
-              : []; // Ensure it's an array for the store
-            const idToUpdate = projData.id || fields[index].id;
-            updateStoreProject(index, {...projData, id: idToUpdate, technologies: techArray});
-          }
-        });
+      if (name && name.startsWith('education') && type === 'change' && value.education) {
+        // Filter out undefined entries and ensure all required fields are present
+        const validEducationEntries = value.education.filter((edu): edu is NonNullable<typeof edu> & {
+          id: string;
+          institution: string;
+          degree: string;
+          field: string;
+          startDate: string;
+          endDate: string;
+        } => 
+          edu !== undefined && 
+          edu.id !== undefined && 
+          edu.institution !== undefined && 
+          edu.degree !== undefined && 
+          edu.field !== undefined && 
+          edu.startDate !== undefined && 
+          edu.endDate !== undefined
+        );
+        
+        if (validEducationEntries.length > 0) {
+          debouncedUpdateStore(validEducationEntries);
+        }
       }
     });
     return () => subscription.unsubscribe();
-  }, [watch, updateStoreProject, fields]);
+  }, [watch, debouncedUpdateStore, fields]);
 
-  const handleAddProject = () => {
-    const newId = addStoreProject();
+  const handleAddEducation = () => {
+    const newId = addStoreEducation();
     append({ 
       id: newId, 
-      name: '', 
-      description: '', 
-      technologies: '', 
-      url: '', 
-      github: '' 
+      institution: '', 
+      degree: '', 
+      field: '', 
+      startDate: '', 
+      endDate: '', 
+      gpa: '', 
+      achievements: '' 
     });
   };
 
-  const handleRemoveProject = (index: number) => {
-    const projIdToRemove = fields[index].id;
-    removeStoreProject(projIdToRemove);
+  const handleRemoveEducation = (index: number) => {
+    const eduIdToRemove = fields[index].id;
+    removeStoreEducation(eduIdToRemove);
     remove(index);
   };
   
-  const [enhancingProjectIndex, setEnhancingProjectIndex] = useState<number | null>(null);
-
-  const handleAiEnhanceProject = async (index: number) => {
-    const currentProject = watch(`projects.${index}`);
-    if (!currentProject || !currentProject.name || !currentProject.description) {
-      alert("Please provide a project name and a brief description first.");
-      return;
-    }
-    setEnhancingProjectIndex(index);
-    try {
-      const response = await fetch('/api/ai/enhance-project', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectName: currentProject.name,
-          currentDescription: currentProject.description,
-          technologies: typeof currentProject.technologies === 'string' 
-            ? currentProject.technologies.split(',').map(t => t.trim()).filter(Boolean) 
-            : [],
-          resumeTitle: resumeTitle, // Pass resume title for context
-        }),
-      });
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `AI project enhancement failed: ${response.statusText}`);
-      }
-      const { enhancedDescription } = await response.json();
-      setValue(`projects.${index}.description`, enhancedDescription, { shouldDirty: true, shouldValidate: true });
-      alert("Project description enhanced by AI! Please review.");
-    } catch (error) {
-      console.error("AI Project Enhancement error:", error);
-      alert(`AI Project Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setEnhancingProjectIndex(null);
-    }
-  };
-
   return (
     <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
       <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
-        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Projects</h2>
-        <Button type="button" variant="outline" size="sm" onClick={handleAddProject}>
+        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Education</h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddEducation}>
           <PlusCircle className="w-4 h-4 mr-2" />
-          Add Project
+          Add Education
         </Button>
-      </div>
-
-       <div className={cn("p-4 rounded-lg border flex items-start space-x-3", appTheme.tipBoxBg)}>
-        <Briefcase className={cn("w-5 h-5 mt-0.5 shrink-0", appTheme.tipBoxText)} />
-        <p className={cn("text-sm", appTheme.tipBoxText)}>
-          Highlight personal or academic projects that showcase your skills. Briefly describe the project, your role, and the technologies used. Link to live demos or GitHub repos if available.
-        </p>
       </div>
 
       {fields.length > 0 ? (
@@ -3376,70 +2745,65 @@ const ProjectsSection: React.FC = () => {
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => handleRemoveProject(index)}
+                onClick={() => handleRemoveEducation(index)}
                 className="absolute top-3 right-3 text-red-400 hover:text-destructive hover:bg-destructive/10 w-8 h-8"
-                aria-label="Remove project entry"
+                aria-label="Remove education entry"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
               
-              <div>
-                <Label htmlFor={`projects.${index}.name`}>Project Name</Label>
-                <Input id={`projects.${index}.name`} {...register(`projects.${index}.name`)} placeholder="e.g., Personal Portfolio Website"/>
-                {errors.projects?.[index]?.name && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.name?.message}</p>}
-              </div>
-              
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                    <Label htmlFor={`projects.${index}.description`}>Description</Label>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAiEnhanceProject(index)}
-                        disabled={enhancingProjectIndex === index}
-                        className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)}
-                    >
-                        {enhancingProjectIndex === index ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                        ) : (
-                            <Sparkles className="w-3.5 h-3.5 mr-1" />
-                        )}
-                        AI Enhance
-                    </Button>
-                </div>
-                <Textarea
-                  id={`projects.${index}.description`}
-                  {...register(`projects.${index}.description`)}
-                  rows={3}
-                  placeholder="Describe the project, its purpose, key features, and your contributions."
-                />
-                {errors.projects?.[index]?.description && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.description?.message}</p>}
-              </div>
-              
-              <div>
-                <Label htmlFor={`projects.${index}.technologies`}>Technologies Used (comma-separated)</Label>
-                <Input id={`projects.${index}.technologies`} {...register(`projects.${index}.technologies`)} placeholder="e.g., React, Node.js, MongoDB"/>
-                {errors.projects?.[index]?.technologies && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.technologies?.message}</p>}
-              </div>
-
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
                 <div>
-                    <Label htmlFor={`projects.${index}.url`}>Project URL (Optional)</Label>
-                    <div className="relative">
-                        <Input id={`projects.${index}.url`} {...register(`projects.${index}.url`)} placeholder="https://myprojectdemo.com" className="pl-10"/>
-                        <LinkIcon className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)}/>
-                    </div>
-                    {errors.projects?.[index]?.url && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.url?.message}</p>}
+                  <Label htmlFor={`education.${index}.institution`}>Institution Name</Label>
+                  <Input id={`education.${index}.institution`} {...register(`education.${index}.institution`)} placeholder="e.g., University of Example" />
+                  {errors.education?.[index]?.institution && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.institution?.message}</p>}
                 </div>
                 <div>
-                    <Label htmlFor={`projects.${index}.github`}>GitHub Repository (Optional)</Label>
-                    <div className="relative">
-                        <Input id={`projects.${index}.github`} {...register(`projects.${index}.github`)} placeholder="https://github.com/yourname/project" className="pl-10"/>
-                        <Github className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)}/>
-                    </div>
-                    {errors.projects?.[index]?.github && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.github?.message}</p>}
+                  <Label htmlFor={`education.${index}.degree`}>Degree</Label>
+                  <Input id={`education.${index}.degree`} {...register(`education.${index}.degree`)} placeholder="e.g., Bachelor of Science" />
+                  {errors.education?.[index]?.degree && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.degree?.message}</p>}
                 </div>
+              </div>
+
+              <div>
+                <Label htmlFor={`education.${index}.field`}>Field of Study / Major</Label>
+                <Input id={`education.${index}.field`} {...register(`education.${index}.field`)} placeholder="e.g., Computer Science" />
+                {errors.education?.[index]?.field && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.field?.message}</p>}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div>
+                  <Label htmlFor={`education.${index}.startDate`}>Start Date</Label>
+                  <div className="relative">
+                    <Input id={`education.${index}.startDate`} {...register(`education.${index}.startDate`)} placeholder="YYYY or YYYY-MM" className="pr-10" />
+                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
+                  </div>
+                  {errors.education?.[index]?.startDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.startDate?.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor={`education.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
+                  <div className="relative">
+                    <Input id={`education.${index}.endDate`} {...register(`education.${index}.endDate`)} placeholder="YYYY, YYYY-MM or Present" className="pr-10" />
+                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
+                  </div>
+                  {errors.education?.[index]?.endDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.endDate?.message}</p>}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor={`education.${index}.gpa`}>GPA (Optional)</Label>
+                <Input id={`education.${index}.gpa`} {...register(`education.${index}.gpa`)} placeholder="e.g., 3.8/4.0" />
+              </div>
+
+              <div>
+                <Label htmlFor={`education.${index}.achievements`}>Key Achievements/Coursework (Optional - one per line)</Label>
+                <Textarea
+                  id={`education.${index}.achievements`}
+                  {...register(`education.${index}.achievements`)}
+                  rows={3}
+                  placeholder="e.g., Dean's List, Relevant projects, Thesis title"
+                />
+                <p className={cn("text-xs mt-2", appTheme.textMuted)}>List key accomplishments or relevant coursework. Each on a new line for bullet points in the resume.</p>
               </div>
             </div>
           ))}
@@ -3447,15 +2811,252 @@ const ProjectsSection: React.FC = () => {
       ) : (
         <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
           <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
-          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No projects added yet.</p>
-          <p className={cn("text-sm", appTheme.textMuted)}>Showcase your practical experience by adding relevant projects.</p>
+          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No education entries added yet.</p>
+          <p className={cn("text-sm", appTheme.textMuted)}>Click &quot;Add Education&quot; to start building your academic history.</p>
         </div>
       )}
     </form>
   );
 };
 
-export default ProjectsSection;
+export default EducationSection;
+</file>
+
+<file path="components/resume/sections/skills.tsx">
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
+// components/resume/sections/skills.tsx
+'use client';
+import React, { useEffect } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useResumeStore } from '@/hooks/use-resume';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Trash2, Lightbulb, Star } from 'lucide-react';
+import { useTheme } from '@/context/theme-provider';
+import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
+
+const skillLevels = ['Beginner', 'Intermediate', 'Advanced', 'Expert'] as const;
+const skillCategories = ['Technical', 'Soft', 'Language', 'Other'] as const;
+
+const skillEntrySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Skill name is required"),
+  level: z.enum(skillLevels),
+  category: z.enum(skillCategories),
+});
+
+const skillsSchema = z.object({
+  skills: z.array(skillEntrySchema),
+});
+
+type SkillsFormData = z.infer<typeof skillsSchema>;
+
+function getAppTheme(isDark: boolean) {
+  return {
+    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
+    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
+    errorText: isDark ? 'text-red-400' : 'text-red-500',
+    entryCardBg: isDark ? 'bg-neutral-700/40' : 'bg-slate-100',
+    entryCardBorder: isDark ? 'border-neutral-600/60' : 'border-slate-300',
+    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    tipBoxBg: isDark ? 'bg-blue-900/20 border-blue-500/30' : 'bg-blue-50 border-blue-200',
+    tipBoxText: isDark ? 'text-blue-300' : 'text-blue-700',
+  };
+}
+
+const SkillsSection: React.FC = () => {
+  const { 
+    skills: storeSkills, 
+    updateSkill: updateStoreSkill, 
+    addSkill: addStoreSkill, 
+    removeSkill: removeStoreSkill 
+  } = useResumeStore();
+  
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const appTheme = getAppTheme(isDark);
+
+  const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<SkillsFormData>({
+    resolver: zodResolver(skillsSchema),
+    defaultValues: { skills: storeSkills || [] },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "skills",
+  });
+
+  useEffect(() => {
+    // No complex mapping needed as store and RHF structures are aligned for skills
+    if (JSON.stringify(storeSkills) !== JSON.stringify(watch("skills"))) {
+      reset({ skills: storeSkills || [] });
+    }
+  }, [storeSkills, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (skillsArrayFromForm: SkillsFormData['skills']) => {
+      skillsArrayFromForm.forEach((skillData, index) => {
+        const idToUpdate = skillData.id || (fields[index] ? fields[index].id : undefined);
+        if (idToUpdate) {
+          updateStoreSkill(index, { ...skillData, id: idToUpdate });
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      if (name && name.startsWith('skills') && type === 'change' && value.skills) {
+        // Filter out undefined entries and ensure all required properties are present
+        const validSkills = value.skills.filter((skill): skill is { id: string; name: string; level: typeof skillLevels[number]; category: typeof skillCategories[number] } => 
+          skill !== undefined && 
+          typeof skill.id === 'string' && 
+          typeof skill.name === 'string' && 
+          skillLevels.includes(skill.level as any) && 
+          skillCategories.includes(skill.category as any)
+        );
+        debouncedUpdateStore(validSkills);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, debouncedUpdateStore, fields]);
+
+  const handleAddSkill = () => {
+    const newId = addStoreSkill();
+    append({ 
+      id: newId, 
+      name: '', 
+      level: 'Intermediate', 
+      category: 'Technical' 
+    });
+  };
+  
+  const handleRemoveSkill = (index: number) => {
+    const skillIdToRemove = fields[index].id;
+    removeStoreSkill(skillIdToRemove);
+    remove(index);
+  };
+
+  // For shadcn/ui Select, the path to components/ui/select might need adjustment
+  // Also, ensure the Select component from ui/select is compatible with RHF Controller
+  // The original had a custom <Select> which was basically a native <select>.
+  // If using shadcn, Controller is the way.
+  // Let's assume a basic Select component for now or if you are using shadcn's Select, ensure it's correctly imported and used with Controller.
+  // For simplicity and to match existing usage, I'll revert to the previous Select behavior that wraps a native select.
+  // If you intended to use shadcn's Select, the Controller usage would be:
+  // <Controller
+  //   name={`skills.${index}.level`}
+  //   control={control}
+  //   render={({ field }) => (
+  //     <Select onValueChange={field.onChange} defaultValue={field.value}>
+  //       <SelectTrigger id={`skills.${index}.level`} className="pr-10">
+  //         <SelectValue placeholder="Select level" />
+  //       </SelectTrigger>
+  //       <SelectContent>
+  //         {skillLevels.map(level => <SelectItem key={level} value={level}>{level}</SelectItem>)}
+  //       </SelectContent>
+  //     </Select>
+  //   )}
+  // />
+
+  return (
+    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
+        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Skills</h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddSkill}>
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Add Skill
+        </Button>
+      </div>
+      
+      <div className={cn("p-4 rounded-lg border flex items-start space-x-3", appTheme.tipBoxBg)}>
+        <Lightbulb className={cn("w-5 h-5 mt-0.5 shrink-0", appTheme.tipBoxText)} />
+        <p className={cn("text-sm", appTheme.tipBoxText)}>
+          Showcase a mix of technical, soft, and tool-specific skills. Tailor these to the job descriptions you&apos;re targeting for best ATS compatibility.
+        </p>
+      </div>
+
+      {fields.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {fields.map((item, index) => (
+            <div 
+                key={item.id} 
+                className={cn(
+                    "p-4 rounded-lg border space-y-4 relative",
+                    appTheme.entryCardBg,
+                    appTheme.entryCardBorder
+                )}
+            >
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleRemoveSkill(index)}
+                    className="absolute top-2 right-2 text-red-400 hover:text-destructive hover:bg-destructive/10 w-7 h-7"
+                    aria-label="Remove skill entry"
+                >
+                    <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+                
+                <div>
+                    <Label htmlFor={`skills.${index}.name`}>Skill Name</Label>
+                    <Input id={`skills.${index}.name`} {...register(`skills.${index}.name`)} placeholder="e.g., JavaScript" />
+                    {errors.skills?.[index]?.name && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.skills[index]?.name?.message}</p>}
+                </div>
+
+                <div>
+                    <Label htmlFor={`skills.${index}.level`}>Proficiency Level</Label>
+                    <div className="relative">
+                       {/* Using simple HTML select for RHF integration, assuming components/ui/select is this */}
+                        <Controller
+                            name={`skills.${index}.level`}
+                            control={control}
+                            render={({ field }) => (
+                                <select {...field} id={`skills.${index}.level`} className={cn("flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground border-input ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50 pr-10")}>
+                                    {skillLevels.map(level => <option key={level} value={level}>{level}</option>)}
+                                </select>
+                            )}
+                        />
+                        <Star className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
+                    </div>
+                    {errors.skills?.[index]?.level && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.skills[index]?.level?.message}</p>}
+                </div>
+                
+                <div>
+                    <Label htmlFor={`skills.${index}.category`}>Category</Label>
+                     <Controller
+                        name={`skills.${index}.category`}
+                        control={control}
+                        render={({ field }) => (
+                            <select {...field} id={`skills.${index}.category`} className={cn("flex h-10 w-full rounded-md border bg-background px-3 py-2 text-sm text-foreground border-input ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:border-ring disabled:cursor-not-allowed disabled:opacity-50")}>
+                                {skillCategories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                            </select>
+                        )}
+                    />
+                    {errors.skills?.[index]?.category && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.skills[index]?.category?.message}</p>}
+                </div>
+            </div>
+            ))}
+        </div>
+      ) : (
+        <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
+          <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
+          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No skills added yet.</p>
+          <p className={cn("text-sm", appTheme.textMuted)}>Highlight your expertise by adding relevant skills.</p>
+        </div>
+      )}
+    </form>
+  );
+};
+
+export default SkillsSection;
 </file>
 
 <file path="hooks/useShallowResumeSelector.ts">
@@ -4315,297 +3916,6 @@ const AtsScoreDisplay: React.FC = () => {
 export default AtsScoreDisplay;
 </file>
 
-<file path="components/resume/sections/experience.tsx">
-/* eslint-disable @typescript-eslint/no-unused-vars */
-// components/resume/sections/experience.tsx
-'use client';
-import React, { useEffect, useState } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useResumeStore } from '@/hooks/use-resume';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { ExperienceEntry } from '@/types/resume';
-import { PlusCircle, Trash2, Sparkles, CalendarDays, Target, Loader2 } from 'lucide-react';
-import { useTheme } from '@/context/theme-provider';
-import { cn } from '@/lib/utils';
-
-const experienceEntrySchema = z.object({
-  id: z.string(),
-  company: z.string().min(1, "Company name is required"),
-  position: z.string().min(1, "Position/Title is required"),
-  startDate: z.string().min(4, "Start date is required (e.g., YYYY-MM)"),
-  endDate: z.string().min(4, "End date is required (e.g., YYYY-MM or Present)"),
-  description: z.string().min(10, "Description must be at least 10 characters").max(2000, "Description too long."),
-  achievements: z.string().optional(),
-  targetCompanyValues: z.string().optional(),
-});
-
-const experienceSchema = z.object({
-  experience: z.array(experienceEntrySchema),
-});
-
-type ExperienceFormData = z.infer<typeof experienceSchema>;
-
-// Define AppTheme (or import from a central config)
-function getAppTheme(isDark: boolean) {
-  return {
-    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
-    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
-    errorText: isDark ? 'text-red-400' : 'text-red-500',
-    entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
-    entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
-    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
-  };
-}
-
-const ExperienceSection: React.FC = () => {
-  const { experience, updateExperience: updateStoreExperience, addExperience: addStoreExperience, removeExperience: removeStoreExperience } = useResumeStore();
-  const { theme } = useTheme();
-  const isDark = theme === 'dark';
-  const appTheme = getAppTheme(isDark);
-  
-  const [enhancingIndex, setEnhancingIndex] = useState<number | null>(null);
-  const resumeTitle = useResumeStore(state => state.title);
-
-  const { control, register, handleSubmit, watch, setValue, formState: { errors }, reset } = useForm<ExperienceFormData>({
-    resolver: zodResolver(experienceSchema),
-    defaultValues: { experience: [] }, // Initialize with empty, populate via useEffect
-  });
-  
-  useEffect(() => {
-    const storeExperience = experience.map(exp => ({
-      ...exp,
-      achievements: exp.achievements?.join('\n') || '',
-      targetCompanyValues: exp.targetCompanyValues || '',
-    }));
-    reset({ experience: storeExperience });
-  }, [experience, reset]);
-
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "experience",
-  });
-
-  useEffect(() => {
-    const subscription = watch((value, { name, type }) => {
-      if (type === 'change' && value.experience) {
-        value.experience.forEach((expData, index) => {
-          if (expData && fields[index]) {
-            const achievementsArray = expData.achievements?.split('\n').filter(ach => ach.trim() !== '');
-            const idToUpdate = expData.id || fields[index].id;
-            updateStoreExperience(index, { ...expData, id: idToUpdate, achievements: achievementsArray });
-          }
-        });
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, updateStoreExperience, fields]);
-
-  const handleAddExperience = () => {
-    const newId = addStoreExperience();
-    append({
-      id: newId,
-      company: '',
-      position: '',
-      startDate: '',
-      endDate: '',
-      description: '',
-      achievements: '',
-      targetCompanyValues: ''
-    });
-  };
-
-  const handleRemoveExperience = (index: number) => {
-    const expIdToRemove = fields[index].id;
-    removeStoreExperience(expIdToRemove);
-    remove(index);
-  };
-
-  const handleAiEnhance = async (index: number) => {
-    setEnhancingIndex(index);
-    const currentEntry = watch(`experience.${index}`);
-
-    if (!currentEntry || !currentEntry.description) {
-      alert("Please provide a description for the experience entry first.");
-      setEnhancingIndex(null);
-      return;
-    }
-
-    try {
-      const response = await fetch('/api/ai/enhance-experience', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description: currentEntry.description,
-          achievements: currentEntry.achievements?.split('\n').filter(ach => ach.trim() !== ''),
-          title: resumeTitle,
-          jobTitle: currentEntry.position,
-          targetCompanyValues: currentEntry.targetCompanyValues || '',
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `AI enhancement failed: ${response.statusText}`);
-      }
-      const enhancedData = await response.json();
-      setValue(`experience.${index}.description`, enhancedData.enhancedDescription, { shouldDirty: true, shouldValidate: true });
-      setValue(`experience.${index}.achievements`, enhancedData.suggestedAchievements.join('\n'), { shouldDirty: true, shouldValidate: true });
-      alert("Experience enhanced! Review the changes and the suggested achievements.");
-    } catch (error) {
-      console.error("AI Enhancement error:", error);
-      alert(`AI Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
-    } finally {
-      setEnhancingIndex(null);
-    }
-  };
-
-  return (
-    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
-      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
-        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Work Experience</h2>
-        <Button type="button" variant="outline" size="sm" onClick={handleAddExperience}>
-          <PlusCircle className="w-4 h-4 mr-2" />
-          Add Experience
-        </Button>
-      </div>
-
-      {fields.length > 0 ? (
-        <div className="space-y-6">
-          {fields.map((item, index) => (
-            <div 
-              key={item.id} 
-              className={cn(
-                "p-5 sm:p-6 rounded-xl border space-y-5 sm:space-y-6 relative",
-                appTheme.entryCardBg,
-                appTheme.entryCardBorder
-              )}
-            >
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveExperience(index)}
-                className="absolute top-3 right-3 text-red-400 hover:text-destructive hover:bg-destructive/10 w-8 h-8"
-                aria-label="Remove experience entry"
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div>
-                  <Label htmlFor={`experience.${index}.company`}>Company Name</Label>
-                  <Input id={`experience.${index}.company`} {...register(`experience.${index}.company`)} placeholder="e.g., Tech Solutions Inc." />
-                  {errors.experience?.[index]?.company && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.company?.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor={`experience.${index}.position`}>Position / Title</Label>
-                  <Input id={`experience.${index}.position`} {...register(`experience.${index}.position`)} placeholder="e.g., Software Engineer" />
-                  {errors.experience?.[index]?.position && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.position?.message}</p>}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
-                <div>
-                  <Label htmlFor={`experience.${index}.startDate`}>Start Date</Label>
-                  <div className="relative">
-                    <Input id={`experience.${index}.startDate`} {...register(`experience.${index}.startDate`)} placeholder="YYYY-MM" className="pr-10" />
-                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                  </div>
-                  {errors.experience?.[index]?.startDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.startDate?.message}</p>}
-                </div>
-                <div>
-                  <Label htmlFor={`experience.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
-                  <div className="relative">
-                    <Input id={`experience.${index}.endDate`} {...register(`experience.${index}.endDate`)} placeholder="YYYY-MM or Present" className="pr-10" />
-                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                  </div>
-                  {errors.experience?.[index]?.endDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.endDate?.message}</p>}
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor={`experience.${index}.targetCompanyValues`}>
-                    Target Company Keywords/Values (Optional)
-                </Label>
-                <div className="relative">
-                    <Input
-                        id={`experience.${index}.targetCompanyValues`}
-                        {...register(`experience.${index}.targetCompanyValues`)}
-                        placeholder="e.g., innovation, customer-centric, agile"
-                        className="pl-10" // Make space for icon
-                    />
-                    <Target className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
-                </div>
-                <p className={cn("text-xs text-gray-400 mt-1", appTheme.textMuted)}>
-                    Comma-separated keywords. AI will use these to tailor enhancement.
-                </p>
-              </div>
-
-              <div>
-                <div className="flex justify-between items-center mb-1.5">
-                    <Label htmlFor={`experience.${index}.description`}>Key Responsibilities & Description</Label>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleAiEnhance(index)}
-                        disabled={enhancingIndex === index}
-                        className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)}
-                    >
-                        {enhancingIndex === index ? (
-                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
-                        ) : (
-                            <Sparkles className="w-3.5 h-3.5 mr-1" />
-                        )}
-                        AI Enhance Description & Achievements
-                    </Button>
-                </div>
-                <Textarea
-                  id={`experience.${index}.description`}
-                  {...register(`experience.${index}.description`)}
-                  rows={4}
-                  placeholder="Describe your role, responsibilities, and key contributions. Start sentences with action verbs for impact."
-                />
-                {errors.experience?.[index]?.description && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.experience[index]?.description?.message}</p>}
-              </div>
-
-              <div>
-                <Label htmlFor={`experience.${index}.achievements`}>Quantifiable Achievements (Optional - one per line)</Label>
-                <Textarea
-                  id={`experience.${index}.achievements`}
-                  {...register(`experience.${index}.achievements`)}
-                  rows={3}
-                  placeholder="e.g., Increased sales by 15% in Q3 by implementing X strategy."
-                />
-                <p className={cn("text-xs mt-2", appTheme.textMuted)}>
-                  AI can help generate or refine these based on your description above. Focus on impact and numbers.
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-         <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
-          <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
-          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No work experience added yet.</p>
-          <p className={cn("text-sm", appTheme.textMuted)}>Showcase your professional journey by adding your roles.</p>
-        </div>
-      )}
-    </form>
-  );
-};
-
-export default ExperienceSection;
-</file>
-
 <file path="types/resume.ts">
 // types/resume.ts
 
@@ -4929,6 +4239,1137 @@ export async function DELETE(
 }
 </file>
 
+<file path="components/resume/sections/experience.tsx">
+// components/resume/sections/education.tsx
+'use client';
+import React, { useEffect } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useResumeStore } from '@/hooks/use-resume';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Trash2, CalendarDays } from 'lucide-react';
+import { useTheme } from '@/context/theme-provider';
+import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
+
+const educationEntrySchema = z.object({
+  id: z.string(),
+  institution: z.string().min(1, "Institution name is required"),
+  degree: z.string().min(1, "Degree is required"),
+  field: z.string().min(1, "Field of study is required"),
+  startDate: z.string().min(4, "Start date is required (e.g., YYYY or YYYY-MM)"),
+  endDate: z.string().min(4, "End date is required (e.g., YYYY, YYYY-MM or Present)"),
+  gpa: z.string().optional(),
+  achievements: z.string().optional(),
+});
+
+const educationSchema = z.object({
+  education: z.array(educationEntrySchema),
+});
+
+type EducationFormData = z.infer<typeof educationSchema>;
+
+function getAppTheme(isDark: boolean) {
+  return {
+    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
+    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
+    errorText: isDark ? 'text-red-400' : 'text-red-500',
+    entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
+    entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
+    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
+  };
+}
+
+const EducationSection: React.FC = () => {
+  const { 
+    education: storeEducation, 
+    updateEducation: updateStoreEducation, 
+    addEducation: addStoreEducation, 
+    removeEducation: removeStoreEducation 
+  } = useResumeStore();
+  
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const appTheme = getAppTheme(isDark);
+
+  const { control, register, handleSubmit, watch, formState: { errors }, reset } = useForm<EducationFormData>({
+    resolver: zodResolver(educationSchema),
+    defaultValues: { 
+      education: storeEducation.map(edu => ({
+        ...edu,
+        achievements: edu.achievements?.join('\n') || '',
+      })) 
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "education",
+  });
+
+  useEffect(() => {
+    const storeEducationForRHF = storeEducation.map(edu => ({
+      ...edu,
+      achievements: edu.achievements?.join('\n') || '',
+    }));
+    if (JSON.stringify(storeEducationForRHF) !== JSON.stringify(watch("education"))) {
+      reset({ education: storeEducationForRHF });
+    }
+  }, [storeEducation, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (educationArrayFromForm: EducationFormData['education']) => {
+      educationArrayFromForm.forEach((eduData, index) => {
+        const achievementsArray = eduData.achievements?.split('\n').filter(ach => ach.trim() !== '') || [];
+        const idToUpdate = eduData.id || (fields[index] ? fields[index].id : undefined);
+        
+        if (idToUpdate) {
+            // Check if store action needs index or if it can find by ID
+            // Assuming updateStoreEducation finds by index if using original store's updateEducation(index, data)
+            // Or if it finds by ID, pass the ID
+            // Current updateStoreEducation(index, data) is fine here.
+            updateStoreEducation(index, { ...eduData, id: idToUpdate, achievements: achievementsArray });
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      if (name && name.startsWith('education') && type === 'change' && value.education) {
+        const validEducationEntries = value.education.filter((edu): edu is NonNullable<typeof edu> & {
+          id: string;
+          institution: string;
+          degree: string;
+          field: string;
+          startDate: string;
+          endDate: string;
+        } => {
+          return edu != null && 
+                 typeof edu.id === 'string' && 
+                 typeof edu.institution === 'string' && 
+                 typeof edu.degree === 'string' && 
+                 typeof edu.field === 'string' && 
+                 typeof edu.startDate === 'string' && 
+                 typeof edu.endDate === 'string';
+        });
+        
+        if (validEducationEntries.length > 0) {
+          debouncedUpdateStore(validEducationEntries);
+        }
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, debouncedUpdateStore, fields]);
+
+  const handleAddEducation = () => {
+    const newId = addStoreEducation();
+    append({ 
+      id: newId, 
+      institution: '', 
+      degree: '', 
+      field: '', 
+      startDate: '', 
+      endDate: '', 
+      gpa: '', 
+      achievements: '' 
+    });
+  };
+
+  const handleRemoveEducation = (index: number) => {
+    const eduIdToRemove = fields[index].id;
+    removeStoreEducation(eduIdToRemove);
+    remove(index);
+  };
+  
+  return (
+    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
+        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Education</h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddEducation}>
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Add Education
+        </Button>
+      </div>
+
+      {fields.length > 0 ? (
+        <div className="space-y-6">
+          {fields.map((item, index) => (
+            <div 
+              key={item.id} 
+              className={cn(
+                "p-5 sm:p-6 rounded-xl border space-y-5 sm:space-y-6 relative",
+                appTheme.entryCardBg,
+                appTheme.entryCardBorder
+              )}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveEducation(index)}
+                className="absolute top-3 right-3 text-red-400 hover:text-destructive hover:bg-destructive/10 w-8 h-8"
+                aria-label="Remove education entry"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div>
+                  <Label htmlFor={`education.${index}.institution`}>Institution Name</Label>
+                  <Input id={`education.${index}.institution`} {...register(`education.${index}.institution`)} placeholder="e.g., University of Example" />
+                  {errors.education?.[index]?.institution && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.institution?.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor={`education.${index}.degree`}>Degree</Label>
+                  <Input id={`education.${index}.degree`} {...register(`education.${index}.degree`)} placeholder="e.g., Bachelor of Science" />
+                  {errors.education?.[index]?.degree && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.degree?.message}</p>}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor={`education.${index}.field`}>Field of Study / Major</Label>
+                <Input id={`education.${index}.field`} {...register(`education.${index}.field`)} placeholder="e.g., Computer Science" />
+                {errors.education?.[index]?.field && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.field?.message}</p>}
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div>
+                  <Label htmlFor={`education.${index}.startDate`}>Start Date</Label>
+                  <div className="relative">
+                    <Input id={`education.${index}.startDate`} {...register(`education.${index}.startDate`)} placeholder="YYYY or YYYY-MM" className="pr-10" />
+                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
+                  </div>
+                  {errors.education?.[index]?.startDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.startDate?.message}</p>}
+                </div>
+                <div>
+                  <Label htmlFor={`education.${index}.endDate`}>End Date (or &quot;Present&quot;)</Label>
+                  <div className="relative">
+                    <Input id={`education.${index}.endDate`} {...register(`education.${index}.endDate`)} placeholder="YYYY, YYYY-MM or Present" className="pr-10" />
+                    <CalendarDays className={cn("absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)} />
+                  </div>
+                  {errors.education?.[index]?.endDate && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.education[index]?.endDate?.message}</p>}
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor={`education.${index}.gpa`}>GPA (Optional)</Label>
+                <Input id={`education.${index}.gpa`} {...register(`education.${index}.gpa`)} placeholder="e.g., 3.8/4.0" />
+              </div>
+
+              <div>
+                <Label htmlFor={`education.${index}.achievements`}>Key Achievements/Coursework (Optional - one per line)</Label>
+                <Textarea
+                  id={`education.${index}.achievements`}
+                  {...register(`education.${index}.achievements`)}
+                  rows={3}
+                  placeholder="e.g., Dean's List, Relevant projects, Thesis title"
+                />
+                <p className={cn("text-xs mt-2", appTheme.textMuted)}>List key accomplishments or relevant coursework. Each on a new line for bullet points in the resume.</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
+          <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
+          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No education entries added yet.</p>
+          <p className={cn("text-sm", appTheme.textMuted)}>Click &quot;Add Education&quot; to start building your academic history.</p>
+        </div>
+      )}
+    </form>
+  );
+};
+
+export default EducationSection;
+</file>
+
+<file path="components/resume/sections/personal-info.tsx">
+// components/resume/sections/personal-info.tsx
+'use client';
+import React, { useState, useEffect } from 'react';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useResumeStore } from '@/hooks/use-resume';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { PersonalInfo } from '@/types/resume';
+import { Loader2, MailCheck } from 'lucide-react';
+import { useTheme } from '@/context/theme-provider';
+import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
+
+// Zod schema (remains the same)
+const personalInfoSchema = z.object({
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().min(1, "Phone number is required"),
+  location: z.string().min(1, "Location is required"),
+  linkedin: z.string().url().optional().or(z.literal('')),
+  website: z.string().url().optional().or(z.literal('')),
+  summary: z.string().min(20, "Summary should be at least 20 characters").max(1000, "Summary too long"),
+});
+
+// Define AppTheme (remains the same)
+function getAppTheme(isDark: boolean) {
+  return {
+    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
+    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
+    aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
+    errorText: isDark ? 'text-red-400' : 'text-red-500',
+  };
+}
+
+const PersonalInfoSection: React.FC = () => {
+  const { personalInfo: storePersonalInfo, updatePersonalInfo } = useResumeStore();
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const appTheme = getAppTheme(isDark);
+
+  const { control, handleSubmit, formState: { errors }, watch, setValue, reset } = useForm<PersonalInfo>({
+    resolver: zodResolver(personalInfoSchema),
+    defaultValues: storePersonalInfo,
+  });
+
+  // Effect to update RHF if storePersonalInfo changes from an external source
+  useEffect(() => {
+    if (JSON.stringify(storePersonalInfo) !== JSON.stringify(watch())) {
+      reset(storePersonalInfo);
+    }
+  }, [storePersonalInfo, reset, watch]);
+
+  // Debounce the function that updates the Zustand store
+  const debouncedUpdateStore = useDebouncedCallback(
+    (data: PersonalInfo) => {
+      updatePersonalInfo(data);
+    },
+    500 // Debounce time in ms
+  );
+
+  // Effect to watch RHF changes and call the debounced store update
+  useEffect(() => {
+    const subscription = watch((value) => {
+      debouncedUpdateStore(value as PersonalInfo);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, debouncedUpdateStore]);
+
+  const [isEnhancingSummary, setIsEnhancingSummary] = useState(false);
+
+  const handleAiEnhanceSummary = async () => {
+    const currentSummaryValue = watch("summary");
+    const resumeTitle = useResumeStore.getState().title;
+
+    if (!currentSummaryValue || currentSummaryValue.trim().length < 10) {
+      alert("Please write a brief summary first (at least 10 characters).");
+      return;
+    }
+    setIsEnhancingSummary(true);
+    try {
+      const response = await fetch('/api/ai/enhance-summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+            currentSummary: currentSummaryValue,
+            resumeTitle: resumeTitle,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `AI summary enhancement failed: ${response.statusText}`);
+      }
+      const { enhancedSummary } = await response.json();
+      setValue("summary", enhancedSummary, { shouldDirty: true, shouldValidate: true });
+      alert("Summary enhanced by AI! Please review.");
+    } catch (error) {
+      console.error("AI Summary Enhancement error:", error);
+      alert(`AI Summary Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setIsEnhancingSummary(false);
+    }
+  };
+
+  return (
+    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
+      <h2 className={cn("text-xl sm:text-2xl font-semibold border-b pb-4 mb-6 sm:mb-8", appTheme.textHeading, appTheme.borderSecondary)}>
+        Personal Information
+      </h2>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 sm:gap-y-6">
+        <div>
+            <Label htmlFor="firstName">First Name</Label>
+            <Controller name="firstName" control={control} render={({ field }) => <Input id="firstName" {...field} placeholder="e.g., John"/>}/>
+            {errors.firstName && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.firstName.message}</p>}
+        </div>
+        <div>
+            <Label htmlFor="lastName">Last Name</Label>
+            <Controller name="lastName" control={control} render={({ field }) => <Input id="lastName" {...field} placeholder="e.g., Doe"/>}/>
+            {errors.lastName && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.lastName.message}</p>}
+        </div>
+        <div>
+            <Label htmlFor="email">Email Address</Label>
+            <Controller name="email" control={control} render={({ field }) => <Input id="email" type="email" {...field} placeholder="e.g., john.doe@example.com"/>}/>
+            {errors.email && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.email.message}</p>}
+        </div>
+        <div>
+            <Label htmlFor="phone">Phone Number</Label>
+            <Controller name="phone" control={control} render={({ field }) => <Input id="phone" type="tel" {...field} placeholder="e.g., (123) 456-7890"/>}/>
+            {errors.phone && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.phone.message}</p>}
+        </div>
+      </div>
+
+      <div>
+        <Label htmlFor="location">Location</Label>
+        <Controller name="location" control={control} render={({ field }) => <Input id="location" {...field} placeholder="e.g., San Francisco, CA"/>}/>
+        {errors.location && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.location.message}</p>}
+      </div>
+      
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5 sm:gap-y-6">
+        <div>
+            <Label htmlFor="linkedin">LinkedIn Profile URL (Optional)</Label>
+            <Controller name="linkedin" control={control} render={({ field }) => <Input id="linkedin" {...field} placeholder="e.g., linkedin.com/in/johndoe"/>}/>
+            {errors.linkedin && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.linkedin.message}</p>}
+        </div>
+        <div>
+            <Label htmlFor="website">Personal Website/Portfolio (Optional)</Label>
+            <Controller name="website" control={control} render={({ field }) => <Input id="website" {...field} placeholder="e.g., johndoe.com"/>}/>
+            {errors.website && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.website.message}</p>}
+        </div>
+      </div>
+      
+      <div>
+        <div className="flex justify-between items-center mb-1.5">
+            <Label htmlFor="summary">Professional Summary</Label>
+            <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleAiEnhanceSummary}
+                disabled={isEnhancingSummary}
+                className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)}
+            >
+                {isEnhancingSummary ? (
+                    <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                ) : (
+                    <MailCheck className="w-3.5 h-3.5 mr-1" />
+                )}
+                AI Enhance
+            </Button>
+        </div>
+        <Controller
+          name="summary"
+          control={control}
+          render={({ field }) => (
+            <Textarea
+              id="summary"
+              {...field}
+              rows={5}
+              placeholder="A brief, compelling overview of your skills, experience, and career goals (2-4 sentences recommended)..."
+            />
+          )}
+        />
+        {errors.summary && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.summary.message}</p>}
+        <p className={cn("text-xs mt-2", appTheme.textMuted)}>
+            Tip: Tailor this summary to the type of roles you&apos;re targeting. Highlight your most relevant qualifications.
+        </p>
+      </div>
+    </form>
+  );
+};
+
+export default PersonalInfoSection;
+</file>
+
+<file path="components/resume/sections/projects.tsx">
+// components/resume/sections/projects.tsx
+'use client';
+import React, { useEffect, useState } from 'react';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { useResumeStore } from '@/hooks/use-resume';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Trash2, Link as LinkIcon, Github, Loader2, Briefcase, MailCheck } from 'lucide-react';
+import { useTheme } from '@/context/theme-provider';
+import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
+
+const projectEntrySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Project name is required"),
+  description: z.string().min(10, "Description must be at least 10 characters").max(1000, "Description too long."),
+  technologies: z.string().min(1, "List at least one technology (comma-separated)"),
+  url: z.string().url("Please enter a valid URL (e.g., https://example.com)").optional().or(z.literal('')),
+  github: z.string().url("Please enter a valid GitHub URL").optional().or(z.literal('')),
+});
+
+const projectsSchema = z.object({
+  projects: z.array(projectEntrySchema),
+});
+
+type ProjectsFormData = z.infer<typeof projectsSchema>;
+
+function getAppTheme(isDark: boolean) {
+  return {
+    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
+    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    borderSecondary: isDark ? 'border-neutral-700/50' : 'border-neutral-200',
+    errorText: isDark ? 'text-red-400' : 'text-red-500',
+    entryCardBg: isDark ? 'bg-neutral-700/30' : 'bg-slate-50',
+    entryCardBorder: isDark ? 'border-neutral-600/50' : 'border-slate-200',
+    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    aiButtonText: isDark ? 'text-purple-400 hover:text-purple-300' : 'text-purple-600 hover:text-purple-700',
+    tipBoxBg: isDark ? 'bg-green-900/20 border-green-500/30' : 'bg-green-50 border-green-200',
+    tipBoxText: isDark ? 'text-green-300' : 'text-green-700',
+  };
+}
+
+const ProjectsSection: React.FC = () => {
+  const { 
+    projects: storeProjects, 
+    updateProject: updateStoreProject, 
+    addProject: addStoreProject, 
+    removeProject: removeStoreProject 
+  } = useResumeStore();
+  
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  const appTheme = getAppTheme(isDark);
+  const resumeTitle = useResumeStore(state => state.title);
+
+  const { control, register, handleSubmit, watch, formState: { errors }, setValue, reset } = useForm<ProjectsFormData>({
+    resolver: zodResolver(projectsSchema),
+    defaultValues: { 
+      projects: storeProjects.map(proj => ({
+        ...proj,
+        technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
+      })) 
+    },
+  });
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "projects",
+  });
+
+  useEffect(() => {
+    const storeProjectsForRHF = storeProjects.map(proj => ({
+      ...proj,
+      technologies: Array.isArray(proj.technologies) ? proj.technologies.join(', ') : '',
+    }));
+    if (JSON.stringify(storeProjectsForRHF) !== JSON.stringify(watch("projects"))) {
+      reset({ projects: storeProjectsForRHF });
+    }
+  }, [storeProjects, reset, watch]);
+
+  const debouncedUpdateStore = useDebouncedCallback(
+    (projectsArrayFromForm: ProjectsFormData['projects']) => {
+      projectsArrayFromForm.forEach((projData, index) => {
+        const techArray = typeof projData.technologies === 'string'
+          ? projData.technologies.split(',').map(t => t.trim()).filter(t => t)
+          : [];
+        const idToUpdate = projData.id || (fields[index] ? fields[index].id : undefined);
+        if (idToUpdate) {
+          updateStoreProject(index, {...projData, id: idToUpdate, technologies: techArray});
+        }
+      });
+    },
+    500
+  );
+
+  useEffect(() => {
+    const subscription = watch((value, { name, type }) => {
+      if (name && name.startsWith('projects') && type === 'change' && value.projects) {
+        const validProjects = value.projects.filter((project): project is NonNullable<typeof project> & { id: string; name: string; description: string; technologies: string } => 
+          project != null && 
+          typeof project.id === 'string' && 
+          typeof project.name === 'string' && 
+          typeof project.description === 'string' && 
+          typeof project.technologies === 'string'
+        );
+        debouncedUpdateStore(validProjects);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, debouncedUpdateStore, fields]);
+
+  const handleAddProject = () => {
+    const newId = addStoreProject();
+    append({ 
+      id: newId, 
+      name: '', 
+      description: '', 
+      technologies: '', 
+      url: '', 
+      github: '' 
+    });
+  };
+
+  const handleRemoveProject = (index: number) => {
+    const projIdToRemove = fields[index].id;
+    removeStoreProject(projIdToRemove);
+    remove(index);
+  };
+  
+  const [enhancingProjectIndex, setEnhancingProjectIndex] = useState<number | null>(null);
+
+  const handleAiEnhanceProject = async (index: number) => {
+    const currentProject = watch(`projects.${index}`);
+    if (!currentProject || !currentProject.name || !currentProject.description) {
+      alert("Please provide a project name and a brief description first.");
+      return;
+    }
+    setEnhancingProjectIndex(index);
+    try {
+      const response = await fetch('/api/ai/enhance-project', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          projectName: currentProject.name,
+          currentDescription: currentProject.description,
+          technologies: typeof currentProject.technologies === 'string' 
+            ? currentProject.technologies.split(',').map(t => t.trim()).filter(Boolean) 
+            : [],
+          resumeTitle: resumeTitle,
+        }),
+      });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `AI project enhancement failed: ${response.statusText}`);
+      }
+      const { enhancedDescription } = await response.json();
+      setValue(`projects.${index}.description`, enhancedDescription, { shouldDirty: true, shouldValidate: true });
+      alert("Project description enhanced by AI! Please review.");
+    } catch (error) {
+      console.error("AI Project Enhancement error:", error);
+      alert(`AI Project Enhancement failed: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setEnhancingProjectIndex(null);
+    }
+  };
+
+  return (
+    <form className="space-y-6 sm:space-y-8" onSubmit={handleSubmit(() => {})}>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 border-b pb-4 mb-6 sm:mb-8" style={{borderColor: appTheme.borderSecondary}}>
+        <h2 className={cn("text-xl sm:text-2xl font-semibold", appTheme.textHeading)}>Projects</h2>
+        <Button type="button" variant="outline" size="sm" onClick={handleAddProject}>
+          <PlusCircle className="w-4 h-4 mr-2" />
+          Add Project
+        </Button>
+      </div>
+
+       <div className={cn("p-4 rounded-lg border flex items-start space-x-3", appTheme.tipBoxBg)}>
+        <Briefcase className={cn("w-5 h-5 mt-0.5 shrink-0", appTheme.tipBoxText)} />
+        <p className={cn("text-sm", appTheme.tipBoxText)}>
+          Highlight personal or academic projects that showcase your skills. Briefly describe the project, your role, and the technologies used. Link to live demos or GitHub repos if available.
+        </p>
+      </div>
+
+      {fields.length > 0 ? (
+        <div className="space-y-6">
+          {fields.map((item, index) => (
+            <div 
+              key={item.id} 
+              className={cn(
+                "p-5 sm:p-6 rounded-xl border space-y-5 sm:space-y-6 relative",
+                appTheme.entryCardBg,
+                appTheme.entryCardBorder
+              )}
+            >
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveProject(index)}
+                className="absolute top-3 right-3 text-red-400 hover:text-destructive hover:bg-destructive/10 w-8 h-8"
+                aria-label="Remove project entry"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+              
+              <div>
+                <Label htmlFor={`projects.${index}.name`}>Project Name</Label>
+                <Input id={`projects.${index}.name`} {...register(`projects.${index}.name`)} placeholder="e.g., Personal Portfolio Website"/>
+                {errors.projects?.[index]?.name && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.name?.message}</p>}
+              </div>
+              
+              <div>
+                <div className="flex justify-between items-center mb-1.5">
+                    <Label htmlFor={`projects.${index}.description`}>Description</Label>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleAiEnhanceProject(index)}
+                        disabled={enhancingProjectIndex === index}
+                        className={cn("text-xs p-1 flex items-center", appTheme.aiButtonText)}
+                    >
+                        {enhancingProjectIndex === index ? (
+                            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" />
+                        ) : (
+                            <MailCheck className="w-3.5 h-3.5 mr-1" />
+                        )}
+                        AI Enhance
+                    </Button>
+                </div>
+                <Textarea
+                  id={`projects.${index}.description`}
+                  {...register(`projects.${index}.description`)}
+                  rows={3}
+                  placeholder="Describe the project, its purpose, key features, and your contributions."
+                />
+                {errors.projects?.[index]?.description && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.description?.message}</p>}
+              </div>
+              
+              <div>
+                <Label htmlFor={`projects.${index}.technologies`}>Technologies Used (comma-separated)</Label>
+                <Input id={`projects.${index}.technologies`} {...register(`projects.${index}.technologies`)} placeholder="e.g., React, Node.js, MongoDB"/>
+                {errors.projects?.[index]?.technologies && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.technologies?.message}</p>}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-5">
+                <div>
+                    <Label htmlFor={`projects.${index}.url`}>Project URL (Optional)</Label>
+                    <div className="relative">
+                        <Input id={`projects.${index}.url`} {...register(`projects.${index}.url`)} placeholder="https://myprojectdemo.com" className="pl-10"/>
+                        <LinkIcon className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)}/>
+                    </div>
+                    {errors.projects?.[index]?.url && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.url?.message}</p>}
+                </div>
+                <div>
+                    <Label htmlFor={`projects.${index}.github`}>GitHub Repository (Optional)</Label>
+                    <div className="relative">
+                        <Input id={`projects.${index}.github`} {...register(`projects.${index}.github`)} placeholder="https://github.com/yourname/project" className="pl-10"/>
+                        <Github className={cn("absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 pointer-events-none", appTheme.iconColor)}/>
+                    </div>
+                    {errors.projects?.[index]?.github && <p className={cn("text-xs mt-1.5", appTheme.errorText)}>{errors.projects[index]?.github?.message}</p>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className={cn("text-center py-10 border rounded-xl", appTheme.entryCardBg, appTheme.entryCardBorder)}>
+          <PlusCircle className={cn("w-12 h-12 mx-auto mb-4", appTheme.iconColor)} />
+          <p className={cn("mb-3 font-medium", appTheme.textHeading)}>No projects added yet.</p>
+          <p className={cn("text-sm", appTheme.textMuted)}>Showcase your practical experience by adding relevant projects.</p>
+        </div>
+      )}
+    </form>
+  );
+};
+
+export default ProjectsSection;
+</file>
+
+<file path="package.json">
+{
+  "name": "resume-builder-claude",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "postinstall": "prisma generate",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@clerk/nextjs": "^6.20.0",
+    "@clerk/themes": "^2.2.46",
+    "@google/genai": "^1.0.1",
+    "@google/generative-ai": "^0.24.1",
+    "@hookform/resolvers": "^5.0.1",
+    "@prisma/client": "^6.8.2",
+    "@radix-ui/react-slot": "^1.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
+    "lucide-react": "^0.511.0",
+    "next": "^15.2.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.56.4",
+    "tailwind-merge": "^3.3.0",
+    "tailwindcss-animate": "^1.0.7",
+    "use-debounce": "^10.0.4",
+    "zod": "^3.25.28",
+    "zustand": "^5.0.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3",
+    "@types/node": "^20.17.50",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/use-sync-external-store": "^1.5.0",
+    "@types/uuid": "^10.0.0",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.8",
+    "postcss": "^8",
+    "prisma": "^6.8.2",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}
+</file>
+
+<file path="components/dashboard/dashboard-content.tsx">
+// components/dashboard/dashboard-content.tsx
+'use client';
+
+import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { UserButton } from '@clerk/nextjs';
+import { 
+    Plus, FileText, Download, Calendar, Star, Sun, Moon, 
+    Briefcase, BarChart3, DownloadCloud, Loader2, Trash2, Edit3, AlertTriangle, 
+    MailCheck
+} from 'lucide-react';
+import { useTheme } from '@/context/theme-provider';
+import { useResumeStore } from '@/hooks/use-resume';
+import { Button } from '@/components/ui/button';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
+
+interface ResumeFromApi {
+  id: string;
+  title: string;
+  atsScore: number;
+  updatedAt: string;
+  status: 'draft' | 'completed';
+}
+
+interface DashboardContentProps {
+  userId: string;
+}
+
+const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
+  const { theme, toggleTheme } = useTheme();
+  const [resumes, setResumes] = useState<ResumeFromApi[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const resetResumeInStore = useResumeStore(state => state.resetResume);
+
+  const isDark = theme === 'dark';
+
+  // Theme classes derived from the current theme state
+  // In a larger app, this logic might be part of a more centralized theme configuration utility
+  const appTheme = {
+    pageBg: isDark ? 'bg-neutral-950' : 'bg-slate-100',
+    headerBg: isDark ? 'bg-neutral-900/80 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md',
+    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
+    textBody: isDark ? 'text-neutral-300' : 'text-neutral-700', // Slightly softer than heading
+    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    textMuted2: isDark ? 'text-neutral-500' : 'text-neutral-400',
+    borderPrimary: isDark ? 'border-neutral-700' : 'border-neutral-300',
+    borderSecondary: isDark ? 'border-neutral-800' : 'border-neutral-200/70',
+    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
+    iconAccentColor: isDark ? 'text-blue-400' : 'text-blue-600',
+    // Specific button text colors (if not covered by Button variants)
+    buttonGhostText: isDark ? 'text-neutral-400 hover:text-neutral-100' : 'text-neutral-500 hover:text-neutral-900',
+  };
+
+  const fetchResumes = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('/api/resumes');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `Failed to fetch resumes: ${response.statusText}`);
+      }
+      const data: ResumeFromApi[] = await response.json();
+      setResumes(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching resumes.');
+      setResumes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (userId) {
+        fetchResumes();
+    }
+  }, [userId, fetchResumes]);
+
+  const handleCreateNewClick = () => {
+    if (userId) {
+      resetResumeInStore(userId);
+    }
+  };
+
+  const handleDeleteResume = async (resumeId: string, resumeTitle: string) => {
+    if (!confirm(`Are you sure you want to delete the resume titled "${resumeTitle}"? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      const response = await fetch(`/api/resumes/${resumeId}`, { method: 'DELETE' });
+      if (!response.ok) {
+        let errorMsg = `Failed to delete resume: ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.message) {
+                errorMsg = errorData.message;
+            }
+        } catch (e) { console.error("Failed to parse error response:", e); }
+        throw new Error(errorMsg);
+      }
+      setResumes(prevResumes => prevResumes.filter(r => r.id !== resumeId));
+      // TODO: Replace with a toast notification
+      alert('Resume deleted successfully.'); 
+    } catch (err) {
+      console.error("Error deleting resume:", err);
+      alert(`Error deleting resume: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  };
+  
+  const getScoreColorText = (score: number) => {
+    if (score >= 80) return isDark ? 'text-green-400' : 'text-green-600';
+    if (score >= 60) return isDark ? 'text-yellow-400' : 'text-yellow-500';
+    return isDark ? 'text-red-400' : 'text-red-500';
+  };
+
+  const getScoreBgClass = (score: number) => {
+    if (score >= 80) return isDark ? 'bg-green-500/10 border-green-500/20' : 'bg-green-100 border-green-200';
+    if (score >= 60) return isDark ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-yellow-100 border-yellow-200';
+    return isDark ? 'bg-red-500/10 border-red-500/20' : 'bg-red-100 border-red-200';
+  };
+
+  const statIcons = [
+    <Briefcase key="total" className={`w-6 h-6 ${appTheme.iconAccentColor}`} />,
+    <BarChart3 key="avg" className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-500'}`} />,
+    <DownloadCloud key="downloads" className={`w-6 h-6 ${isDark ? 'text-teal-400' : 'text-teal-500'}`} />
+  ];
+
+  const StatCard: React.FC<{title: string, value: string | number, change: string, icon: React.ReactNode, unit?: string}> = ({ title, value, change, icon, unit }) => (
+    <Card className="p-5 sm:p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"> {/* Uses themed Card */}
+      <CardHeader className="p-0 mb-3 flex flex-row items-center justify-between space-y-0">
+        <CardTitle className={cn("text-sm font-medium", appTheme.textMuted)}>{title}</CardTitle>
+        {icon}
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className={cn("text-2xl sm:text-3xl font-bold", appTheme.textHeading)}>{value}{unit || ''}</div>
+        <p className={cn(`text-xs mt-1`, change.startsWith('+') || change.includes('current') ? (isDark ? 'text-green-400' : 'text-green-600') : appTheme.textMuted2)}>
+          {change}
+        </p>
+      </CardContent>
+    </Card>
+  );
+
+  // Loading State
+  if (loading) {
+    return (
+      <div className={cn("min-h-screen flex flex-col", appTheme.pageBg)}>
+        <header className={cn("sticky top-0 z-40 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
+            <div className="max-w-full mx-auto px-4 sm:px-6 py-3.5">
+                <div className="flex items-center justify-between">
+                    <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
+                            <MailCheck className="w-4 h-4 text-white" />
+                        </div>
+                        <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
+                        <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
+                    </Link>
+                    <div className="flex items-center space-x-2 sm:space-x-4">
+                        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
+                            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                        </Button>
+                        <UserButton appearance={{elements: {avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`}}}/>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div className="flex-grow flex items-center justify-center">
+          <Loader2 className={cn("w-10 h-10 sm:w-12 sm:h-12 animate-spin", appTheme.textHeading)} />
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error) {
+    return (
+        <div className={cn("min-h-screen flex flex-col", appTheme.pageBg)}>
+            <header className={cn("sticky top-0 z-40 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
+                 <div className="max-w-full mx-auto px-4 sm:px-6 py-3.5"> {/* Consistent Header Structure */}
+                    <div className="flex items-center justify-between">
+                        <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
+                            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
+                                <MailCheck className="w-4 h-4 text-white" />
+                            </div>
+                            <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
+                             <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
+                        </Link>
+                        <div className="flex items-center space-x-2 sm:space-x-4">
+                            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
+                                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                            </Button>
+                            <UserButton appearance={{elements: {avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`}}}/>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            <div className="flex-grow flex flex-col items-center justify-center text-center px-4 py-8">
+                <AlertTriangle className={cn("w-12 h-12 sm:w-16 sm:h-16 mb-4", isDark ? 'text-red-400' : 'text-red-500')} />
+                <h2 className={cn("text-xl sm:text-2xl font-semibold mb-2", appTheme.textHeading)}>Oops! Something went wrong.</h2>
+                <p className={cn("mb-6 text-sm sm:text-base", appTheme.textMuted)}>{error}</p>
+                <Button onClick={fetchResumes} size="lg">Try Again</Button>
+            </div>
+        </div>
+    );
+  }
+
+  // Main Dashboard Content
+  return (
+    <div className={cn("min-h-screen transition-colors duration-300", appTheme.pageBg)}>
+      <header className={cn("sticky top-0 z-40 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
+        <div className="max-w-full mx-auto px-4 sm:px-6 py-3.5">
+          <div className="flex items-center justify-between">
+            <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
+              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
+                <MailCheck className="w-4 h-4 text-white" />
+              </div>
+              <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
+               <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
+            </Link>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
+                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </Button>
+              <UserButton 
+                appearance={{
+                    elements: {
+                        avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", 
+                        userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`,
+                        userButtonPopoverMain: 'font-sans', // Ensure font consistency
+                        userButtonPopoverFooter: 'hidden', // Example: hide footer if not needed
+                        userButtonPopoverActionButtonText__manageAccount: 'text-foreground',
+                        userButtonPopoverActionButtonIcon__manageAccount: 'text-foreground',
+                        userButtonPopoverActionButton__signOut: `${isDark ? 'text-red-400' : 'text-red-500'}`,
+                        userButtonPopoverActionButtonIcon__signOut: `${isDark ? 'text-red-400' : 'text-red-500'}`,
+                    }
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-10 md:mb-12">
+          {[
+            { title: 'Total Resumes', value: resumes.length, change: `+${resumes.filter(r => new Date(r.updatedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000).length} this month`, icon: statIcons[0] },
+            { title: 'Avg. ATS Score', value: resumes.length > 0 ? Math.round(resumes.reduce((sum, r) => sum + r.atsScore, 0) / resumes.length) : 0, change: resumes.length > 0 ? 'Based on current' : 'N/A', icon: statIcons[1], unit: '%' },
+            { title: 'Mock Downloads', value: 0, change: 'Feature in dev', icon: statIcons[2] }
+          ].map((stat) => (
+            <StatCard key={stat.title} {...stat} />
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 md:mb-10">
+          <div>
+            <h2 className={cn("text-2xl sm:text-3xl font-bold", appTheme.textHeading)}>Your Resumes</h2>
+            <p className={cn("mt-1 sm:mt-1.5 text-sm", appTheme.textMuted)}>Manage and create your AI-powered resumes.</p>
+          </div>
+          <Link href="/dashboard/create-resume" passHref className="mt-4 sm:mt-0 w-full sm:w-auto">
+            <Button size="lg" onClick={handleCreateNewClick} className="w-full sm:w-auto shadow-lg hover:shadow-xl transform transition-all hover:-translate-y-px duration-200">
+              <Plus className="w-5 h-5 mr-2" /> Create New Resume
+            </Button>
+          </Link>
+        </div>
+
+        {resumes.length === 0 ? (
+          <Card className="text-center py-12 sm:py-16 px-6 shadow-xl">
+            <CardContent className="p-0 flex flex-col items-center">
+              <FileText className={cn("w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-6", appTheme.iconColor)} />
+              <h3 className={cn("text-xl sm:text-2xl font-semibold mb-3", appTheme.textHeading)}>No Resumes Yet</h3>
+              <p className={cn("mb-8 max-w-md mx-auto text-sm sm:text-base", appTheme.textMuted)}>
+                It looks like you haven&apos;t created any resumes. Let&apos;s build your first one!
+              </p>
+              <Link href="/dashboard/create-resume" passHref>
+                <Button size="lg" onClick={handleCreateNewClick} className="shadow-lg hover:shadow-xl">
+                  <Plus className="w-5 h-5 mr-2 inline-block" />Create Your First Resume
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
+            {resumes.map((resume) => (
+              <Card key={resume.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 group">
+                <CardContent className="p-5 sm:p-6 flex-grow">
+                  <div className="flex items-start justify-between mb-3">
+                    <Link href={`/dashboard/create-resume?resumeId=${resume.id}`} className="block flex-1 min-w-0">
+                        <h4 className={cn("text-base sm:text-lg font-semibold group-hover:text-primary transition-colors truncate", appTheme.textHeading)}>
+                        {resume.title}
+                        </h4>
+                    </Link>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => handleDeleteResume(resume.id, resume.title)}
+                        title="Delete Resume"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 sm:h-8 sm:w-8 ml-2 flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </Button>
+                  </div>
+                  <div className="flex items-center flex-wrap gap-2 mb-4">
+                    <span className={cn(`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border`, getScoreBgClass(resume.atsScore), getScoreColorText(resume.atsScore))}>
+                      <Star className="w-3 h-3 mr-1.5" /> {resume.atsScore}% ATS
+                    </span>
+                    <span className={cn(`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border`, resume.status === 'completed' ? (isDark ? 'bg-green-500/10 text-green-300 border-green-500/20' : 'bg-green-100 text-green-700 border-green-200') : (isDark ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20' : 'bg-yellow-100 text-yellow-700 border-yellow-200'))}>
+                      {resume.status.charAt(0).toUpperCase() + resume.status.slice(1)}
+                    </span>
+                  </div>
+                  <div className={cn("flex items-center text-xs space-x-1.5", appTheme.textMuted2)}>
+                    <Calendar className="w-3.5 h-3.5" /> <span>Updated: {new Date(resume.updatedAt).toLocaleDateString()}</span>
+                  </div>
+                </CardContent>
+                <CardFooter className={cn("p-4 border-t", appTheme.borderSecondary)}>
+                  <div className="flex space-x-2 sm:space-x-3 w-full">
+                    <Link href={`/dashboard/create-resume?resumeId=${resume.id}`} className="flex-1"> 
+                      <Button variant="outline" size="sm" className="w-full">
+                        <Edit3 className="w-4 h-4 mr-1.5 sm:mr-2" /> Edit
+                      </Button>
+                    </Link>
+                    <Button variant="outline" size="sm" title="Download PDF (coming soon)" disabled className="px-3"> {/* Icon only or smaller */}
+                      <Download className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};
+
+export default DashboardContent;
+</file>
+
 <file path="components/landing/landing-page.tsx">
 /* eslint-disable @typescript-eslint/no-unused-vars */
 // components/landing/landing-page.tsx
@@ -4938,9 +5379,11 @@ import Link from 'next/link';
 // ... other imports
 import { 
     ArrowRight, Play, Star, Check, Users, Award, Clock, Shield, Moon, Sun, 
-    Sparkles, TrendingUp, Zap, Target, FileText as FileTextIconLucide,
+    TrendingUp, Zap, Target, FileText as FileTextIconLucide,
     LogIn, Edit2, DownloadCloud, BarChart2, ListChecks, ShieldCheck, Briefcase, // New icons for features
-    Github, Linkedin, Twitter as TwitterIcon // Icons for Footer
+    Github, Linkedin, Twitter as TwitterIcon, // Icons for Footer
+    MailCheckIcon,
+    MailCheck
 } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import SlidingCompanies from './sliding-company';
@@ -5209,29 +5652,126 @@ const LandingPageContent = () => {
         } as React.CSSProperties}
     >
       <nav className={`flex items-center justify-between px-4 sm:px-6 py-3 max-w-7xl mx-auto ${isDark ? 'bg-neutral-950/80' : 'bg-slate-50/80'} backdrop-blur-md sticky top-0 z-50 border-b ${themeClasses.border}`}>
-        <Link href="/" className="flex items-center space-x-2"> <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md"> <Sparkles className="w-4 h-4 text-white" /> </div> <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent"> GetHired </span> </Link>
+        <Link href="/" className="flex items-center space-x-2"> <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-lg flex items-center justify-center shadow-md"> <MailCheck className="w-4 h-4 text-white" /> </div> <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent"> GetHired </span> </Link>
         <div className="hidden md:flex items-center space-x-6"> <a href="#features" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Features</a> <a href="#pricing" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Pricing</a> <a href="#examples" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Examples</a> <a href="#testimonials" className={`${themeClasses.textMuted} hover:${themeClasses.text} transition-colors text-sm font-medium`}>Reviews</a> </div>
         <div className="flex items-center space-x-3"> <button onClick={toggleTheme} className={`p-2 rounded-md ${themeClasses.textMuted} hover:${themeClasses.text} transition-colors`} aria-label="Toggle theme"> {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} </button> <Link href="/sign-in" className={`${themeClasses.textMuted} hover:${themeClasses.text} text-sm font-medium transition-colors`}> Sign in </Link> <Link href="/sign-up" className={`${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5`}> Get Started </Link> </div>
       </nav>
       
+      {/* ======== NEW HERO SECTION START ======== */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-16 pb-24 relative overflow-hidden">
+        {/* Enhanced Background Elements */}
+        <div className="absolute inset-0 overflow-hidden -z-20">
+          {/* Gradient Orbs */}
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl animate-pulse animation-delay-1000"></div>
+          
+          {/* Additional Floating Elements */}
+          <div className="absolute top-20 right-1/4 w-32 h-32 bg-purple-500/3 rounded-full blur-2xl animate-float"></div>
+          <div className="absolute bottom-32 left-1/3 w-24 h-24 bg-cyan-500/4 rounded-full blur-2xl animate-float-delayed"></div>
+          
+          {/* Shiny Particles */}
+          <div className="absolute top-1/4 left-1/4 w-2 h-2 bg-blue-400 rounded-full animate-pulse opacity-60"></div>
+          <div className="absolute top-1/3 right-1/3 w-1.5 h-1.5 bg-purple-400 rounded-full animate-pulse opacity-40" style={{animationDelay: '1s'}}></div>
+          <div className="absolute bottom-1/4 left-1/5 w-1 h-1 bg-cyan-400 rounded-full animate-pulse opacity-50" style={{animationDelay: '2s'}}></div>
+          <div className="absolute top-1/2 right-1/5 w-1.5 h-1.5 bg-pink-400 rounded-full animate-pulse opacity-30" style={{animationDelay: '0.5s'}}></div>
+          
+          {/* Geometric Shapes */}
+          <div className="absolute top-16 left-1/6 w-4 h-4 border border-blue-300/20 rotate-45 animate-spin-slow"></div>
+          <div className="absolute bottom-20 right-1/6 w-6 h-6 border border-purple-300/15 rotate-12 animate-pulse"></div>
+        </div>
+
+        {/* Grid Pattern Overlay */}
         {isDark && (
-            <div className="absolute inset-0 -z-10 opacity-20 [mask-image:radial-gradient(ellipse_at_center,white_20%,transparent_70%)]">
-                <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
-                    <defs><pattern id="hero-texture-dark" width="8" height="8" patternUnits="userSpaceOnUse" patternContentUnits="userSpaceOnUse"><circle cx="1" cy="1" r="0.5" fill="rgba(255,255,255,0.3)"></circle></pattern></defs>
-                    <rect width="100%" height="100%" fill="url(#hero-texture-dark)"></rect>
-                </svg>
-            </div>
+          <div className="absolute inset-0 -z-10 opacity-[0.03]">
+            <svg className="absolute inset-0 h-full w-full" aria-hidden="true">
+              <defs>
+                <pattern id="hero-grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M0 40V0h40" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#hero-grid)"/>
+            </svg>
+          </div>
         )}
-        <div className="absolute inset-0 overflow-hidden -z-20"> <div className="absolute -top-40 -right-40 w-80 h-80 bg-blue-500/5 rounded-full blur-3xl animate-pulse"></div> <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-500/5 rounded-full blur-3xl animate-pulse animation-delay-1000"></div> </div>
+
+        {/* Radial Gradient Spotlight */}
+        <div className="absolute inset-0 -z-15">
+          <div className={`absolute inset-0 ${isDark 
+            ? '[background:radial-gradient(circle_at_center,rgba(99,102,241,0.05)_0%,transparent_50%)]' 
+            : '[background:radial-gradient(circle_at_center,rgba(59,130,246,0.03)_0%,transparent_60%)]'
+          }`}></div>
+        </div>
+
+        {/* Animated Lines */}
+        <div className="absolute inset-0 -z-10 opacity-20">
+          <div className={`absolute top-1/4 left-0 w-full h-px ${isDark ? 'bg-gradient-to-r from-transparent via-blue-400/20 to-transparent' : 'bg-gradient-to-r from-transparent via-blue-500/15 to-transparent'} animate-pulse`}></div>
+          <div className={`absolute bottom-1/3 left-0 w-full h-px ${isDark ? 'bg-gradient-to-r from-transparent via-purple-400/15 to-transparent' : 'bg-gradient-to-r from-transparent via-purple-500/10 to-transparent'} animate-pulse`} style={{animationDelay: '1.5s'}}></div>
+        </div>
+
         <div className={`text-center transition-all duration-1000 relative z-10 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-          <div className={`inline-flex items-center ${isDark ? 'bg-emerald-800/30 text-emerald-300 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}> <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div> Trusted by 150,000+ professionals worldwide </div>
-          <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}> <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold ${themeClasses.text} mb-6 leading-tight tracking-tight`}> Build resumes that <span className="block bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent animate-gradient-x"> dominate ATS systems </span> </h1> </div>
-          <div className="animate-fade-in-up" style={{animationDelay: '0.6s'}}> <p className={`text-lg sm:text-xl ${themeClasses.textMuted} mb-10 max-w-2xl mx-auto leading-relaxed`}> AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster. </p> </div>
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-16 animate-fade-in-up" style={{animationDelay: '0.8s'}}> <Link href="/sign-up" className={`${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-8 py-3.5 rounded-lg font-semibold flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group`}> Create Professional Resume <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" /> </Link> <button onClick={handleWatchDemo} className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors group`} > <div className={`p-2.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-slate-100'} backdrop-blur-sm mr-3 group-hover:bg-blue-500/10 transition-colors`}> <Play className="w-4 h-4" /> </div> Watch Demo (2 min) </button> </div>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '1s'}}> {[{ value: '97%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-400' }, { value: '150K+', label: 'Resumes Created', icon: Users, color: 'text-blue-400' }, { value: '4.9/5', label: 'User Rating', icon: Star, color: 'text-yellow-400' }, { value: '90s', label: 'Build Time', icon: Zap, color: 'text-purple-400' }].map((stat, index) => ( <div key={index} className={`text-center p-4 sm:p-6 rounded-xl ${isDark ? 'bg-neutral-800/50' : 'bg-white/70'} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1 group`}> <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2 group-hover:scale-110 transition-transform`} /> <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1`}> {stat.value} </div> <div className={`text-xs sm:text-sm ${themeClasses.textMuted2} font-medium`}> {stat.label} </div> </div> ))} </div>
+          <div className={`inline-flex items-center ${isDark ? 'bg-emerald-800/30 text-emerald-300 border border-emerald-700/40' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'} px-3 py-1.5 rounded-full text-xs font-medium mb-8 backdrop-blur-sm animate-fade-in-up`} style={{animationDelay: '0.2s'}}> 
+            <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full mr-2 animate-pulse"></div> 
+            Trusted by 150,000+ professionals worldwide 
+          </div>
+          
+          <div className="animate-fade-in-up" style={{animationDelay: '0.4s'}}> 
+            <h1 className={`text-4xl sm:text-5xl lg:text-6xl font-bold ${themeClasses.text} mb-6 leading-tight tracking-tight`}> 
+              <span className="font-sans">Build resumes that</span>{' '}
+              <span className="block  bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent animate-gradient-x "> 
+                <span className=' italic'>dominate</span> ATS systems 
+              </span>   
+            </h1> 
+          </div>
+          
+          <div className="animate-fade-in-up" style={{animationDelay: '0.6s'}}> 
+            <p className={`text-lg sm:text-xl ${themeClasses.textMuted} mb-10 max-w-2xl mx-auto leading-relaxed`}> 
+              AI-powered resume builder with advanced ATS optimization, real-time scoring, and templates designed by industry experts. Land interviews 3x faster. 
+            </p> 
+          </div>
+          
+          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-16 animate-fade-in-up" style={{animationDelay: '0.8s'}}> 
+            <Link href="/sign-up" className={`relative overflow-hidden ${themeClasses.accentGradient} ${themeClasses.accentHover} text-white px-8 py-3.5 rounded-lg font-semibold flex items-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group`}> 
+              {/* Button Shine Effect */}
+              <div className="absolute inset-0 -top-2 -bottom-2 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-out"></div>
+              <span className="relative z-10">Create Professional Resume</span>
+              <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform relative z-10" /> 
+            </Link> 
+            
+            <button onClick={handleWatchDemo} className={`flex items-center ${themeClasses.textMuted} hover:${themeClasses.text} font-medium transition-colors group`} > 
+              <div className={`relative p-2.5 rounded-full ${isDark ? 'bg-white/5' : 'bg-slate-100'} backdrop-blur-sm mr-3 group-hover:bg-blue-500/10 transition-colors overflow-hidden`}> 
+                {/* Play Button Glow */}
+                <div className="absolute inset-0 rounded-full bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors duration-300"></div>
+                <Play className="w-4 h-4 relative z-10" /> 
+              </div> 
+              Watch Demo (2 min) 
+            </button> 
+          </div>
+          
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 max-w-4xl mx-auto animate-fade-in-up" style={{animationDelay: '1s'}}> 
+            {[
+              { value: '97%', label: 'Interview Rate', icon: TrendingUp, color: 'text-emerald-400' }, 
+              { value: '150K+', label: 'Resumes Created', icon: Users, color: 'text-blue-400' }, 
+              { value: '4.9/5', label: 'User Rating', icon: Star, color: 'text-yellow-400' }, 
+              { value: '90s', label: 'Build Time', icon: Zap, color: 'text-purple-400' }
+            ].map((stat, index) => ( 
+              <div key={index} className={`relative text-center p-4 sm:p-6 rounded-xl ${isDark ? 'bg-neutral-800/50' : 'bg-white/70'} backdrop-blur-sm border ${themeClasses.border} hover:border-blue-500/30 transition-all duration-300 hover:-translate-y-1 group overflow-hidden`}> 
+                {/* Card Shine Effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-500/5 to-transparent transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out"></div>
+                
+                <stat.icon className={`w-5 h-5 ${stat.color} mx-auto mb-2 group-hover:scale-110 transition-transform relative z-10`} /> 
+                <div className={`text-2xl sm:text-3xl font-bold ${stat.color} mb-1 relative z-10`}> 
+                  {stat.value} 
+                </div> 
+                <div className={`text-xs sm:text-sm ${themeClasses.textMuted2} font-medium relative z-10`}> 
+                  {stat.label} 
+                </div> 
+              </div> 
+            ))} 
+          </div>
         </div>
       </section>
+      {/* ======== NEW HERO SECTION END ======== */}
+
       <SlidingCompanies />
 
       <section id="features" className="max-w-7xl mx-auto px-4 sm:px-6 py-20 md:py-28">
@@ -5363,7 +5903,7 @@ const LandingPageContent = () => {
                         
                         <div className={cn(
                             "absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-all duration-500",
-                            "border-gradient-to-r animate-spin-slow",
+                            "border-gradient-to-r animate-spin-slow", // This will now use the 8s duration from new hero
                             index === 0 && "border-emerald-500/30",
                             index === 1 && "border-blue-500/30", 
                             index === 2 && "border-purple-500/30"
@@ -5464,7 +6004,7 @@ const LandingPageContent = () => {
             <div className="col-span-full lg:col-span-3 mb-6 lg:mb-0">
               <Link href="/" className="flex items-center space-x-2 mb-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Sparkles className="w-5 h-5 text-white" />
+                  <MailCheckIcon className="w-5 h-5 text-white" />
                 </div>
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-indigo-500 bg-clip-text text-transparent">
                   GetHired
@@ -5520,419 +6060,58 @@ const LandingPageContent = () => {
       </footer>
 
 <style jsx>{`
-  @keyframes float { 0%, 100% { transform: translateY(0px) rotate(0deg); } 33% { transform: translateY(-10px) rotate(1deg); } 66% { transform: translateY(5px) rotate(-1deg); } }
-  @keyframes float-delayed { 0%, 100% { transform: translateY(0px) rotate(0deg); } 33% { transform: translateY(8px) rotate(-1deg); } 66% { transform: translateY(-12px) rotate(1deg); } }
+  /* Styles from new hero section */
+  @keyframes float { 
+    0%, 100% { transform: translateY(0px) rotate(0deg); } 
+    33% { transform: translateY(-8px) rotate(1deg); } 
+    66% { transform: translateY(4px) rotate(-1deg); } 
+  }
+  @keyframes float-delayed { 
+    0%, 100% { transform: translateY(0px) rotate(0deg); } 
+    33% { transform: translateY(6px) rotate(-1deg); } 
+    66% { transform: translateY(-10px) rotate(1deg); } 
+  }
+  @keyframes spin-slow { 
+    from { transform: rotate(0deg); } 
+    to { transform: rotate(360deg); } 
+  }
+  .animate-float { animation: float 6s ease-in-out infinite; }
+  .animate-float-delayed { animation: float-delayed 8s ease-in-out infinite; animation-delay: 1s; }
+  .animate-spin-slow { animation: spin-slow 8s linear infinite; } /* Updated duration from new hero */
+  
+  @keyframes gradient-x { 
+    0%, 100% { background-position: 0% 50%; } 
+    50% { background-position: 100% 50%; } 
+  }
+  .animate-gradient-x { 
+    background-size: 200% 200%; 
+    animation: gradient-x 3s ease infinite; 
+  }
+  @keyframes fade-in-up { 
+    from { opacity: 0; transform: translateY(20px); } 
+    to { opacity: 1; transform: translateY(0); } 
+  }
+  .animate-fade-in-up { 
+    animation: fade-in-up 0.6s ease-out forwards; 
+  }
+
+  /* Preserved styles from original that were not in the new hero's specific style block */
   @keyframes pulse-gentle { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.6; } }
-  @keyframes spin-slow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-  .animate-float { animation: float 8s ease-in-out infinite; }
-  .animate-float-delayed { animation: float-delayed 10s ease-in-out infinite; animation-delay: 2s; }
   .animate-pulse-gentle { animation: pulse-gentle 3s ease-in-out infinite; }
-  .animate-spin-slow { animation: spin-slow 4s linear infinite; }
-  .animation-delay-1000 { animation-delay: 1s; }
+
   @keyframes gradient-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
   .animate-gradient-shift { background-size: 200% 200%; animation: gradient-shift 4s ease infinite; }
+  
   .group:hover .animate-ping { animation-duration: 0.5s; }
-  @keyframes gradient-x { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
-  .animate-gradient-x { background-size: 200% 200%; animation: gradient-x 3s ease infinite; }
-  @keyframes fade-in-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-  .animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; }
+
+  /* Utility class, definition is the same in both, kept for clarity */
+  .animation-delay-1000 { animation-delay: 1s; }
 `}</style>
     </div>
   );
 };
 
 export default LandingPageContent;
-</file>
-
-<file path="package.json">
-{
-  "name": "resume-builder-claude",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && next build",
-    "postinstall": "prisma generate",
-    "start": "next start",
-    "lint": "next lint"
-  },
-  "dependencies": {
-    "@clerk/nextjs": "^6.20.0",
-    "@clerk/themes": "^2.2.46",
-    "@google/genai": "^1.0.1",
-    "@google/generative-ai": "^0.24.1",
-    "@hookform/resolvers": "^5.0.1",
-    "@prisma/client": "^6.8.2",
-    "@radix-ui/react-slot": "^1.2.3",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "html2canvas": "^1.4.1",
-    "jspdf": "^3.0.1",
-    "lucide-react": "^0.511.0",
-    "next": "^15.2.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-hook-form": "^7.56.4",
-    "tailwind-merge": "^3.3.0",
-    "tailwindcss-animate": "^1.0.7",
-    "use-debounce": "^10.0.4",
-    "zod": "^3.25.28",
-    "zustand": "^5.0.5"
-  },
-  "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20.17.50",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/use-sync-external-store": "^1.5.0",
-    "@types/uuid": "^10.0.0",
-    "eslint": "^9",
-    "eslint-config-next": "15.1.8",
-    "postcss": "^8",
-    "prisma": "^6.8.2",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
-  }
-}
-</file>
-
-<file path="components/dashboard/dashboard-content.tsx">
-// components/dashboard/dashboard-content.tsx
-'use client';
-
-import React, { useState, useEffect, useCallback } from 'react';
-import Link from 'next/link';
-import { UserButton } from '@clerk/nextjs';
-import { 
-    Plus, FileText, Download, Calendar, Star, Sparkles, Sun, Moon, 
-    Briefcase, BarChart3, DownloadCloud, Loader2, Trash2, Edit3, AlertTriangle 
-} from 'lucide-react';
-import { useTheme } from '@/context/theme-provider';
-import { useResumeStore } from '@/hooks/use-resume';
-import { Button } from '@/components/ui/button';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
-
-interface ResumeFromApi {
-  id: string;
-  title: string;
-  atsScore: number;
-  updatedAt: string;
-  status: 'draft' | 'completed';
-}
-
-interface DashboardContentProps {
-  userId: string;
-}
-
-const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
-  const { theme, toggleTheme } = useTheme();
-  const [resumes, setResumes] = useState<ResumeFromApi[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const resetResumeInStore = useResumeStore(state => state.resetResume);
-
-  const isDark = theme === 'dark';
-
-  // Theme classes derived from the current theme state
-  // In a larger app, this logic might be part of a more centralized theme configuration utility
-  const appTheme = {
-    pageBg: isDark ? 'bg-neutral-950' : 'bg-slate-100',
-    headerBg: isDark ? 'bg-neutral-900/80 backdrop-blur-md' : 'bg-white/80 backdrop-blur-md',
-    textHeading: isDark ? 'text-neutral-100' : 'text-neutral-800',
-    textBody: isDark ? 'text-neutral-300' : 'text-neutral-700', // Slightly softer than heading
-    textMuted: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    textMuted2: isDark ? 'text-neutral-500' : 'text-neutral-400',
-    borderPrimary: isDark ? 'border-neutral-700' : 'border-neutral-300',
-    borderSecondary: isDark ? 'border-neutral-800' : 'border-neutral-200/70',
-    iconColor: isDark ? 'text-neutral-400' : 'text-neutral-500',
-    iconAccentColor: isDark ? 'text-blue-400' : 'text-blue-600',
-    // Specific button text colors (if not covered by Button variants)
-    buttonGhostText: isDark ? 'text-neutral-400 hover:text-neutral-100' : 'text-neutral-500 hover:text-neutral-900',
-  };
-
-  const fetchResumes = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch('/api/resumes');
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || `Failed to fetch resumes: ${response.statusText}`);
-      }
-      const data: ResumeFromApi[] = await response.json();
-      setResumes(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unknown error occurred while fetching resumes.');
-      setResumes([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-        fetchResumes();
-    }
-  }, [userId, fetchResumes]);
-
-  const handleCreateNewClick = () => {
-    if (userId) {
-      resetResumeInStore(userId);
-    }
-  };
-
-  const handleDeleteResume = async (resumeId: string, resumeTitle: string) => {
-    if (!confirm(`Are you sure you want to delete the resume titled "${resumeTitle}"? This action cannot be undone.`)) {
-      return;
-    }
-    try {
-      const response = await fetch(`/api/resumes/${resumeId}`, { method: 'DELETE' });
-      if (!response.ok) {
-        let errorMsg = `Failed to delete resume: ${response.statusText}`;
-        try {
-            const errorData = await response.json();
-            if (errorData && errorData.message) {
-                errorMsg = errorData.message;
-            }
-        } catch (e) { console.error("Failed to parse error response:", e); }
-        throw new Error(errorMsg);
-      }
-      setResumes(prevResumes => prevResumes.filter(r => r.id !== resumeId));
-      // TODO: Replace with a toast notification
-      alert('Resume deleted successfully.'); 
-    } catch (err) {
-      console.error("Error deleting resume:", err);
-      alert(`Error deleting resume: ${err instanceof Error ? err.message : String(err)}`);
-    }
-  };
-  
-  const getScoreColorText = (score: number) => {
-    if (score >= 80) return isDark ? 'text-green-400' : 'text-green-600';
-    if (score >= 60) return isDark ? 'text-yellow-400' : 'text-yellow-500';
-    return isDark ? 'text-red-400' : 'text-red-500';
-  };
-
-  const getScoreBgClass = (score: number) => {
-    if (score >= 80) return isDark ? 'bg-green-500/10 border-green-500/20' : 'bg-green-100 border-green-200';
-    if (score >= 60) return isDark ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-yellow-100 border-yellow-200';
-    return isDark ? 'bg-red-500/10 border-red-500/20' : 'bg-red-100 border-red-200';
-  };
-
-  const statIcons = [
-    <Briefcase key="total" className={`w-6 h-6 ${appTheme.iconAccentColor}`} />,
-    <BarChart3 key="avg" className={`w-6 h-6 ${isDark ? 'text-purple-400' : 'text-purple-500'}`} />,
-    <DownloadCloud key="downloads" className={`w-6 h-6 ${isDark ? 'text-teal-400' : 'text-teal-500'}`} />
-  ];
-
-  const StatCard: React.FC<{title: string, value: string | number, change: string, icon: React.ReactNode, unit?: string}> = ({ title, value, change, icon, unit }) => (
-    <Card className="p-5 sm:p-6 shadow-lg hover:shadow-xl transition-shadow duration-300"> {/* Uses themed Card */}
-      <CardHeader className="p-0 mb-3 flex flex-row items-center justify-between space-y-0">
-        <CardTitle className={cn("text-sm font-medium", appTheme.textMuted)}>{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent className="p-0">
-        <div className={cn("text-2xl sm:text-3xl font-bold", appTheme.textHeading)}>{value}{unit || ''}</div>
-        <p className={cn(`text-xs mt-1`, change.startsWith('+') || change.includes('current') ? (isDark ? 'text-green-400' : 'text-green-600') : appTheme.textMuted2)}>
-          {change}
-        </p>
-      </CardContent>
-    </Card>
-  );
-
-  // Loading State
-  if (loading) {
-    return (
-      <div className={cn("min-h-screen flex flex-col", appTheme.pageBg)}>
-        <header className={cn("sticky top-0 z-40 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
-            <div className="max-w-full mx-auto px-4 sm:px-6 py-3.5">
-                <div className="flex items-center justify-between">
-                    <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
-                        <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-                            <Sparkles className="w-4 h-4 text-white" />
-                        </div>
-                        <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
-                        <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
-                    </Link>
-                    <div className="flex items-center space-x-2 sm:space-x-4">
-                        <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
-                            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                        </Button>
-                        <UserButton appearance={{elements: {avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`}}}/>
-                    </div>
-                </div>
-            </div>
-        </header>
-        <div className="flex-grow flex items-center justify-center">
-          <Loader2 className={cn("w-10 h-10 sm:w-12 sm:h-12 animate-spin", appTheme.textHeading)} />
-        </div>
-      </div>
-    );
-  }
-
-  // Error State
-  if (error) {
-    return (
-        <div className={cn("min-h-screen flex flex-col", appTheme.pageBg)}>
-            <header className={cn("sticky top-0 z-40 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
-                 <div className="max-w-full mx-auto px-4 sm:px-6 py-3.5"> {/* Consistent Header Structure */}
-                    <div className="flex items-center justify-between">
-                        <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
-                            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-                                <Sparkles className="w-4 h-4 text-white" />
-                            </div>
-                            <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
-                             <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
-                        </Link>
-                        <div className="flex items-center space-x-2 sm:space-x-4">
-                            <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
-                                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                            </Button>
-                            <UserButton appearance={{elements: {avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`}}}/>
-                        </div>
-                    </div>
-                </div>
-            </header>
-            <div className="flex-grow flex flex-col items-center justify-center text-center px-4 py-8">
-                <AlertTriangle className={cn("w-12 h-12 sm:w-16 sm:h-16 mb-4", isDark ? 'text-red-400' : 'text-red-500')} />
-                <h2 className={cn("text-xl sm:text-2xl font-semibold mb-2", appTheme.textHeading)}>Oops! Something went wrong.</h2>
-                <p className={cn("mb-6 text-sm sm:text-base", appTheme.textMuted)}>{error}</p>
-                <Button onClick={fetchResumes} size="lg">Try Again</Button>
-            </div>
-        </div>
-    );
-  }
-
-  // Main Dashboard Content
-  return (
-    <div className={cn("min-h-screen transition-colors duration-300", appTheme.pageBg)}>
-      <header className={cn("sticky top-0 z-40 border-b shadow-sm", appTheme.headerBg, appTheme.borderPrimary)}>
-        <div className="max-w-full mx-auto px-4 sm:px-6 py-3.5">
-          <div className="flex items-center justify-between">
-            <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 bg-primary-gradient rounded-lg flex items-center justify-center shadow-md">
-                <Sparkles className="w-4 h-4 text-white" />
-              </div>
-              <span className={cn("text-lg sm:text-xl font-bold hidden sm:inline", appTheme.textHeading)}>GetHired</span>
-               <span className={cn("text-lg sm:text-xl font-normal hidden md:inline", appTheme.textMuted2)}>/ Dashboard</span>
-            </Link>
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
-                {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </Button>
-              <UserButton 
-                appearance={{
-                    elements: {
-                        avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", 
-                        userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`,
-                        userButtonPopoverMain: 'font-sans', // Ensure font consistency
-                        userButtonPopoverFooter: 'hidden', // Example: hide footer if not needed
-                        userButtonPopoverActionButtonText__manageAccount: 'text-foreground',
-                        userButtonPopoverActionButtonIcon__manageAccount: 'text-foreground',
-                        userButtonPopoverActionButton__signOut: `${isDark ? 'text-red-400' : 'text-red-500'}`,
-                        userButtonPopoverActionButtonIcon__signOut: `${isDark ? 'text-red-400' : 'text-red-500'}`,
-                    }
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6 mb-10 md:mb-12">
-          {[
-            { title: 'Total Resumes', value: resumes.length, change: `+${resumes.filter(r => new Date(r.updatedAt).getTime() > Date.now() - 30 * 24 * 60 * 60 * 1000).length} this month`, icon: statIcons[0] },
-            { title: 'Avg. ATS Score', value: resumes.length > 0 ? Math.round(resumes.reduce((sum, r) => sum + r.atsScore, 0) / resumes.length) : 0, change: resumes.length > 0 ? 'Based on current' : 'N/A', icon: statIcons[1], unit: '%' },
-            { title: 'Mock Downloads', value: 0, change: 'Feature in dev', icon: statIcons[2] }
-          ].map((stat) => (
-            <StatCard key={stat.title} {...stat} />
-          ))}
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 md:mb-10">
-          <div>
-            <h2 className={cn("text-2xl sm:text-3xl font-bold", appTheme.textHeading)}>Your Resumes</h2>
-            <p className={cn("mt-1 sm:mt-1.5 text-sm", appTheme.textMuted)}>Manage and create your AI-powered resumes.</p>
-          </div>
-          <Link href="/dashboard/create-resume" passHref className="mt-4 sm:mt-0 w-full sm:w-auto">
-            <Button size="lg" onClick={handleCreateNewClick} className="w-full sm:w-auto shadow-lg hover:shadow-xl transform transition-all hover:-translate-y-px duration-200">
-              <Plus className="w-5 h-5 mr-2" /> Create New Resume
-            </Button>
-          </Link>
-        </div>
-
-        {resumes.length === 0 ? (
-          <Card className="text-center py-12 sm:py-16 px-6 shadow-xl">
-            <CardContent className="p-0 flex flex-col items-center">
-              <FileText className={cn("w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-6", appTheme.iconColor)} />
-              <h3 className={cn("text-xl sm:text-2xl font-semibold mb-3", appTheme.textHeading)}>No Resumes Yet</h3>
-              <p className={cn("mb-8 max-w-md mx-auto text-sm sm:text-base", appTheme.textMuted)}>
-                It looks like you haven&apos;t created any resumes. Let&apos;s build your first one!
-              </p>
-              <Link href="/dashboard/create-resume" passHref>
-                <Button size="lg" onClick={handleCreateNewClick} className="shadow-lg hover:shadow-xl">
-                  <Plus className="w-5 h-5 mr-2 inline-block" />Create Your First Resume
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
-            {resumes.map((resume) => (
-              <Card key={resume.id} className="flex flex-col overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 group">
-                <CardContent className="p-5 sm:p-6 flex-grow">
-                  <div className="flex items-start justify-between mb-3">
-                    <Link href={`/dashboard/create-resume?resumeId=${resume.id}`} className="block flex-1 min-w-0">
-                        <h4 className={cn("text-base sm:text-lg font-semibold group-hover:text-primary transition-colors truncate", appTheme.textHeading)}>
-                        {resume.title}
-                        </h4>
-                    </Link>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDeleteResume(resume.id, resume.title)}
-                        title="Delete Resume"
-                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 sm:h-8 sm:w-8 ml-2 flex-shrink-0"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Button>
-                  </div>
-                  <div className="flex items-center flex-wrap gap-2 mb-4">
-                    <span className={cn(`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border`, getScoreBgClass(resume.atsScore), getScoreColorText(resume.atsScore))}>
-                      <Star className="w-3 h-3 mr-1.5" /> {resume.atsScore}% ATS
-                    </span>
-                    <span className={cn(`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border`, resume.status === 'completed' ? (isDark ? 'bg-green-500/10 text-green-300 border-green-500/20' : 'bg-green-100 text-green-700 border-green-200') : (isDark ? 'bg-yellow-500/10 text-yellow-300 border-yellow-500/20' : 'bg-yellow-100 text-yellow-700 border-yellow-200'))}>
-                      {resume.status.charAt(0).toUpperCase() + resume.status.slice(1)}
-                    </span>
-                  </div>
-                  <div className={cn("flex items-center text-xs space-x-1.5", appTheme.textMuted2)}>
-                    <Calendar className="w-3.5 h-3.5" /> <span>Updated: {new Date(resume.updatedAt).toLocaleDateString()}</span>
-                  </div>
-                </CardContent>
-                <CardFooter className={cn("p-4 border-t", appTheme.borderSecondary)}>
-                  <div className="flex space-x-2 sm:space-x-3 w-full">
-                    <Link href={`/dashboard/create-resume?resumeId=${resume.id}`} className="flex-1"> 
-                      <Button variant="outline" size="sm" className="w-full">
-                        <Edit3 className="w-4 h-4 mr-1.5 sm:mr-2" /> Edit
-                      </Button>
-                    </Link>
-                    <Button variant="outline" size="sm" title="Download PDF (coming soon)" disabled className="px-3"> {/* Icon only or smaller */}
-                      <Download className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            ))}
-          </div>
-        )}
-      </main>
-    </div>
-  );
-};
-
-export default DashboardContent;
 </file>
 
 <file path="app/dashboard/create-resume/page.tsx">
@@ -5943,8 +6122,10 @@ import React, { useEffect, useState, Suspense, useCallback } from 'react';
 import { useAuth, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
-    Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, Sparkles, 
-    Download as DownloadIcon, Mail, Copy 
+    Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, 
+    Download as DownloadIcon, Mail, Copy,
+    MailCheck, 
+    
 } from 'lucide-react';
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';
@@ -6413,7 +6594,7 @@ function CreateResumePageContent() {
                             className="w-full sm:w-auto sm:flex-1 py-2.5"
                             size="lg"
                         >
-                            {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Sparkles className="w-5 h-5 mr-2" />}
+                            {isGeneratingCoverLetter ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <MailCheck className="w-5 h-5 mr-2" />}
                             Generate with AI
                         </Button>
                         {generatedCoverLetter && (
