@@ -6,6 +6,8 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { dark } from '@clerk/themes'; // Clerk's dark base theme
 import { ThemeProvider } from '@/context/theme-provider';
 
+import { Analytics } from "@vercel/analytics/next"
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -59,6 +61,7 @@ export default function RootLayout({
         <body className={`${inter.className} antialiased`}> {/* Body styles are in globals.css */}
           <ThemeProvider> {/* ThemeProvider should be inside <body> but outside ClerkProvider if Clerk's theme shouldn't change with your app's theme. Or inside if it should. Generally, keeping Clerk's theme stable (e.g., always dark) while your app theme toggles is fine. If you want Clerk to toggle too, place ThemeProvider outside ClerkProvider. For now, your setup is fine. */}
             {children}
+             <Analytics />
           </ThemeProvider>
         </body>
       </html>
