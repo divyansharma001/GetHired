@@ -1,69 +1,60 @@
-````markdown
-# GetHired
+# GetHired - AI-Powered, ATS-Optimized Resume Builder
 
-**AI-Powered, ATS-Optimized Resume Builder**
 
-GetHired combines the latest in AI with professional templates and real-time feedback to help you craft resumes that get noticed.
+
+**GetHired** leverages cutting-edge AI and professionally crafted templates, complemented by real-time feedback, to empower you in creating impactful resumes that capture attention.
 
 ---
 
-## Table of Contents
+## Contents
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
+- [Key Features](#key-features)
+- [Technology Stack](#technology-stack)
 - [Prerequisites](#prerequisites)
 - [Getting Started](#getting-started)
-  - [1. Clone the Repo](#1-clone-the-repo)
+  - [1. Clone Repository](#1-clone-repository)
   - [2. Install Dependencies](#2-install-dependencies)
   - [3. Configure Environment](#3-configure-environment)
-  - [4. Database Setup](#4-database-setup)
-  - [5. Run the Dev Server](#5-run-the-dev-server)
+  - [4. Set Up Database](#4-set-up-database)
+  - [5. Run Development Server](#5-run-development-server)
 - [Production Build](#production-build)
-- [Linting](#linting)
+- [Code Linting](#code-linting)
 - [Deployment](#deployment)
 - [Resources](#resources)
 - [License](#license)
 
 ---
 
-## Features
+## Key Features
 
-- **AI-Powered Content Generation:** Summaries, experience bullets, project descriptions
-- **Real-Time ATS Scoring & Feedback:** Ensure keyword optimization and formatting standards
-- **Multi-Step Builder:** Guided form flow for personal info, experience, education, skills
-- **Live Preview & PDF Export:** See changes instantly and download a print-ready PDF
-- **User Dashboard:** Save, edit, and manage multiple resumes
-- **Dark/Light Mode:** Switch themes to reduce eye strain
+- **Intelligent Content Generation:** AI-driven creation of compelling summaries, experience bullet points, and project descriptions.
+- **Real-time ATS Optimization:** Instant scoring and feedback to ensure optimal keyword integration and formatting for Applicant Tracking Systems.
+- **Guided Multi-Step Builder:** Intuitive form-based workflow for seamless input of personal details, work history, education, and skills.
+- **Live Preview & PDF Export:** Immediate visual feedback on your resume design and the ability to download a print-ready PDF.
+- **Personalized User Dashboard:** Securely save, edit, and manage multiple resume versions.
+- **Customizable Interface:** Option for both light and dark mode to enhance user experience.
 
-## Tech Stack
+## Technology Stack
 
-- **Framework:** Next.js (App Router)
-- **Language:** TypeScript
-- **AI Engine:** Google Gemini
-- **Auth:** Clerk
-- **ORM:** Prisma (PostgreSQL)
-- **Styling:** Tailwind CSS
-- **State:** Zustand
-- **Forms & Validation:** React Hook Form + Zod
+- **Framework:** [Next.js](https://nextjs.org/) (App Router)
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **AI Engine:** [Google Gemini](https://ai.google.dev/)
+- **Authentication:** [Clerk](https://clerk.com/)
+- **ORM:** [Prisma](https://www.prisma.io/) ([PostgreSQL](https://www.postgresql.org/))
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **State Management:** [Zustand](https://zustand-demo.pmnd.rs/)
+- **Forms & Validation:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
 
 ## Prerequisites
 
-- Node.js v18+ and npm/yarn/pnpm
-- Git
-- Access to a PostgreSQL database
+Ensure you have the following installed:
+
+- [Node.js](https://nodejs.org/en/) v18 or higher, along with [npm](https://www.npmjs.com/), [yarn](https://yarnpkg.com/), or [pnpm](https://pnpm.io/).
+- [Git](https://git-scm.com/).
+- Access to a [PostgreSQL](https://www.postgresql.org/) database.
 - API keys for:
-  - Google Gemini
-  - Clerk
-
-## Getting Started
-
-### 1. Clone the Repo
-
-```bash
-git clone https://github.com/your-username/resumeai-pro.git
-cd resumeai-pro
-````
-
+  - [Google Gemini](https://ai.google.dev/)
+  - [Clerk](https://clerk.com/)
 ### 2. Install Dependencies
 
 ```bash
