@@ -7,19 +7,19 @@ generator client {
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
-  // directUrl = env("DIRECT_URL") // Optional: for connection pooling tools like PgBouncer with Prisma Accelerate
 }
 
-// We don't define a User model here explicitly managed by Prisma for auth,
-// as Clerk handles user management. We'll link resumes to Clerk's userId.
-
+// THIS IS THE KEY CHANGE for your existing model
 model Resume {
   id        String   @id @default(cuid())
-  userId    String   // Clerk User ID
+  userId    String
   title     String
   atsScore  Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Link to the new User model required by Next-Auth
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   personalInfo PersonalInfo?
   education    EducationEntry[]
@@ -30,6 +30,58 @@ model Resume {
   @@index([userId])
 }
 
+// These are the models required by Next-Auth Prisma Adapter
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  accounts      Account[]
+  sessions      Session[]
+  
+  // This is the other side of the relation
+  resumes       Resume[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Your other models (PersonalInfo, EducationEntry, etc.) remain unchanged.
+// Just ensure they are still in the file.
+// ... (keep PersonalInfo, EducationEntry, ExperienceEntry, SkillEntry, ProjectEntry models as they are)
 model PersonalInfo {
   id        String  @id @default(cuid())
   firstName String
@@ -39,10 +91,9 @@ model PersonalInfo {
   location  String
   linkedin  String?
   website   String?
-  summary   String  @db.Text // Use Text for potentially longer content
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String @unique // Each resume has one personal info
+  summary   String  @db.Text
+  resume    Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId  String @unique
 }
 
 model EducationEntry {
@@ -53,11 +104,9 @@ model EducationEntry {
   startDate    String
   endDate      String
   gpa          String?
-  achievements String[]  @default([]) // Array of strings for bullet points
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
+  achievements String[]  @default([])
+  resume       Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId     String
   @@index([resumeId])
 }
 
@@ -70,24 +119,21 @@ model ExperienceEntry {
   description         String    @db.Text
   enhancedDescription String?   @db.Text
   achievements        String[]  @default([])
-  targetCompanyValues String?   // <<< ADDED FIELD
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
+  targetCompanyValues String?
+  resume              Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId            String
   @@index([resumeId])
 }
 
 model SkillEntry {
   id       String @id @default(cuid())
   name     String
-  level    String // Could be an Enum later if strict values are enforced
-  category String // Could be an Enum later
-
+  level    String
+  category String
   resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
   resumeId String
-
   @@index([resumeId])
-  @@unique([resumeId, name]) // Optional: prevent duplicate skill names per resume
+  @@unique([resumeId, name])
 }
 
 model ProjectEntry {
@@ -97,9 +143,7 @@ model ProjectEntry {
   technologies String[] @default([])
   url          String?
   github       String?
-
-  resume   Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  resumeId String
-
+  resume       Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  resumeId     String
   @@index([resumeId])
 }
