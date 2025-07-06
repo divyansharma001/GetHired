@@ -3,11 +3,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { UserButton } from '@clerk/nextjs';
+import { signOut, useSession } from 'next-auth/react';
 import { 
     Plus, FileText, Download, Calendar, Star, Sun, Moon, 
     Briefcase, BarChart3, DownloadCloud, Loader2, Trash2, Edit3, AlertTriangle, 
-    MailCheck
+    MailCheck, User, LogOut
 } from 'lucide-react';
 import { useTheme } from '@/context/theme-provider';
 import { useResumeStore } from '@/hooks/use-resume';
@@ -15,6 +15,15 @@ import { Button } from '@/components/ui/button';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 interface ResumeFromApi {
   id: string;
@@ -30,6 +39,7 @@ interface DashboardContentProps {
 
 const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
   const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
   const [resumes, setResumes] = useState<ResumeFromApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -161,7 +171,33 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
                         <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
                             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                         </Button>
-                        <UserButton appearance={{elements: {avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`}}}/>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                              <Avatar className="h-8 w-8">
+                                <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || ''} />
+                                <AvatarFallback>
+                                  <User className="h-4 w-4" />
+                                </AvatarFallback>
+                              </Avatar>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="w-56" align="end" forceMount>
+                            <DropdownMenuLabel className="font-normal">
+                              <div className="flex flex-col space-y-1">
+                                <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                                <p className="text-xs leading-none text-muted-foreground">
+                                  {session?.user?.email}
+                                </p>
+                              </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => signOut()}>
+                              <LogOut className="mr-2 h-4 w-4" />
+                              <span>Log out</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>
@@ -191,7 +227,33 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
                             <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
                                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
                             </Button>
-                            <UserButton appearance={{elements: {avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`}}}/>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                                  <Avatar className="h-8 w-8">
+                                    <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || ''} />
+                                    <AvatarFallback>
+                                      <User className="h-4 w-4" />
+                                    </AvatarFallback>
+                                  </Avatar>
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent className="w-56" align="end" forceMount>
+                                <DropdownMenuLabel className="font-normal">
+                                  <div className="flex flex-col space-y-1">
+                                    <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                                    <p className="text-xs leading-none text-muted-foreground">
+                                      {session?.user?.email}
+                                    </p>
+                                  </div>
+                                </DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => signOut()}>
+                                  <LogOut className="mr-2 h-4 w-4" />
+                                  <span>Log out</span>
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                         </div>
                     </div>
                 </div>
@@ -223,20 +285,33 @@ const DashboardContent: React.FC<DashboardContentProps> = ({ userId }) => {
               <Button variant="ghost" size="icon" onClick={toggleTheme} aria-label="Toggle theme" className={appTheme.buttonGhostText}>
                 {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>
-              <UserButton 
-                appearance={{
-                    elements: {
-                        avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", 
-                        userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`,
-                        userButtonPopoverMain: 'font-sans', // Ensure font consistency
-                        userButtonPopoverFooter: 'hidden', // Example: hide footer if not needed
-                        userButtonPopoverActionButtonText__manageAccount: 'text-foreground',
-                        userButtonPopoverActionButtonIcon__manageAccount: 'text-foreground',
-                        userButtonPopoverActionButton__signOut: `${isDark ? 'text-red-400' : 'text-red-500'}`,
-                        userButtonPopoverActionButtonIcon__signOut: `${isDark ? 'text-red-400' : 'text-red-500'}`,
-                    }
-                }}
-              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || ''} />
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {session?.user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
         </div>

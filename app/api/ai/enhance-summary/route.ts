@@ -1,12 +1,13 @@
 // app/api/ai/enhance-summary/route.ts
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getServerSession } from "next-auth/next"
 import { enhanceSummary } from '@/lib/ai/summary-enhancer';
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getServerSession()
+    
+    if (!session?.user || !("id" in session.user)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 

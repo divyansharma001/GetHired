@@ -1,46 +1,23 @@
-# GetHired - AI-Powered, ATS-Optimized Resume Builder
+# GetHired - AI-Powered Resume Builder
 
+A modern, AI-powered resume builder that helps you create ATS-optimized resumes and land interviews faster.
 
+## Features
 
-**GetHired** leverages cutting-edge AI and professionally crafted templates, complemented by real-time feedback, to empower you in creating impactful resumes that capture attention.
+- **AI-Powered Resume Enhancement**: Automatically improve your resume content with AI
+- **ATS Optimization**: Get real-time ATS scores and suggestions
+- **Cover Letter Generation**: Create tailored cover letters for specific job applications
+- **Modern UI**: Beautiful, responsive design with dark/light theme support
+- **Real-time Preview**: See your resume as you build it
+- **PDF Export**: Download your resume as a professional PDF
+- **Secure Authentication**: NextAuth.js with Google OAuth
 
----
+## Tech Stack
 
-## Contents
-
-- [Key Features](#key-features)
-- [Technology Stack](#technology-stack)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-  - [1. Clone Repository](#1-clone-repository)
-  - [2. Install Dependencies](#2-install-dependencies)
-  - [3. Configure Environment](#3-configure-environment)
-  - [4. Set Up Database](#4-set-up-database)
-  - [5. Run Development Server](#5-run-development-server)
-- [Production Build](#production-build)
-- [Code Linting](#code-linting)
-- [Deployment](#deployment)
-- [Resources](#resources)
-- [License](#license)
-
----
-
-## Key Features
-
-- **Intelligent Content Generation:** AI-driven creation of compelling summaries, experience bullet points, and project descriptions.
-- **Real-time ATS Optimization:** Instant scoring and feedback to ensure optimal keyword integration and formatting for Applicant Tracking Systems.
-- **Guided Multi-Step Builder:** Intuitive form-based workflow for seamless input of personal details, work history, education, and skills.
-- **Live Preview & PDF Export:** Immediate visual feedback on your resume design and the ability to download a print-ready PDF.
-- **Personalized User Dashboard:** Securely save, edit, and manage multiple resume versions.
-- **Customizable Interface:** Option for both light and dark mode to enhance user experience.
-
-## Technology Stack
-
-- **Framework:** [Next.js](https://nextjs.org/) (App Router)
-- **Language:** [TypeScript](https://www.typescriptlang.org/)
-- **AI Engine:** [Google Gemini](https://ai.google.dev/)
-- **Authentication:** [Clerk](https://clerk.com/)
-- **ORM:** [Prisma](https://www.prisma.io/) ([PostgreSQL](https://www.postgresql.org/))
+- **Framework:** [Next.js 15](https://nextjs.org/) with App Router
+- **Database:** [PostgreSQL](https://www.postgresql.org/) with [Prisma ORM](https://www.prisma.io/)
+- **Authentication:** [NextAuth.js](https://next-auth.js.org/) with Google OAuth
+- **AI:** [Google Gemini](https://ai.google.dev/)
 - **Styling:** [Tailwind CSS](https://tailwindcss.com/)
 - **State Management:** [Zustand](https://zustand-demo.pmnd.rs/)
 - **Forms & Validation:** [React Hook Form](https://react-hook-form.com/) + [Zod](https://zod.dev/)
@@ -54,7 +31,8 @@ Ensure you have the following installed:
 - Access to a [PostgreSQL](https://www.postgresql.org/) database.
 - API keys for:
   - [Google Gemini](https://ai.google.dev/)
-  - [Clerk](https://clerk.com/)
+  - [Google OAuth](https://console.cloud.google.com/) (for authentication)
+
 ### 2. Install Dependencies
 
 ```bash
@@ -71,13 +49,13 @@ pnpm install
 Create a `.env.local` file at the project root:
 
 ```env
-# Clerk
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_xxx
-CLERK_SECRET_KEY=sk_test_xxx
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+# NextAuth
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your-nextauth-secret-key-here
+
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 # PostgreSQL
 DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE?schema=public"
@@ -142,7 +120,7 @@ We recommend deploying on Vercel:
 
 * [Next.js Documentation](https://nextjs.org/docs)
 * [Prisma Docs](https://www.prisma.io/docs)
-* [Clerk Quickstart](https://clerk.com/docs)
+* [NextAuth.js Documentation](https://next-auth.js.org/)
 * [Tailwind CSS Guide](https://tailwindcss.com/docs)
 
 

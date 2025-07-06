@@ -27,7 +27,7 @@ const SlidingTechStack = () => {
     { name: 'TypeScript', displayName: 'TypeScript', category: 'language' },
     { name: 'Google Gemini', displayName: 'Gemini AI', category: 'ai' },
     { name: 'LangChain', displayName: 'LangChain', category: 'ai' },
-    { name: 'Clerk', displayName: 'Clerk', category: 'auth' },
+    { name: 'NextAuth.js', displayName: 'NextAuth.js', category: 'auth' },
     { name: 'Prisma', displayName: 'Prisma', category: 'database' },
     { name: 'PostgreSQL', displayName: 'PostgreSQL', category: 'database' },
     { name: 'Tailwind CSS', displayName: 'Tailwind', category: 'styling' },

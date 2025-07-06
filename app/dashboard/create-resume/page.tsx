@@ -2,14 +2,23 @@
 'use client';
 
 import React, { useEffect, useState, Suspense, useCallback } from 'react';
-import { useAuth, UserButton } from '@clerk/nextjs';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
     Loader2, FileText, ArrowLeft, ArrowRight, Save, Sun, Moon, 
     Download as DownloadIcon, Mail, Copy,
-    MailCheck, 
+    MailCheck, User, LogOut
     
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import ResumeForm from '@/components/resume/resume-form';
 import AtsScoreDisplay from '@/components/resume/ats-score-display';
 import ResumePreview from '@/components/resume/resume-preview';
@@ -55,7 +64,7 @@ function getAppTheme(isDark: boolean) {
 
 
 function CreateResumePageContent() {
-  const { userId: clerkUserIdFromAuth, isLoaded: isAuthLoaded } = useAuth();
+  const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeIdFromParams = searchParams.get('resumeId');
@@ -80,10 +89,7 @@ function CreateResumePageContent() {
     userId: userIdInStore,
     title,
     personalInfo,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    education, experience, skills, projects, // ensure these are selected if needed for payload
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    atsScore,
+    // ensure these are selected if needed for payload
     loadResume,
     resetResume,
     setTitle: setResumeTitle,
@@ -98,15 +104,19 @@ function CreateResumePageContent() {
   const stableResetResume = useCallback(resetResume, []); // resetResume from store is stable
 
   useEffect(() => { /* ... (useEffect logic for loading/resetting resume - unchanged) ... */ 
-    if (isAuthLoaded) {
-      if (!clerkUserIdFromAuth) {
-        router.push('/sign-in');
-        return;
-      }
+    if (status === 'loading') return;
+    
+    if (status === 'unauthenticated') {
+      router.push('/sign-in');
+      return;
+    }
+    
+    if (session?.user && "id" in session.user) {
+      const userId = (session.user as { id: string }).id;
       setIsLoadingPage(true);
       if (resumeIdFromParams) {
         // If current store matches, no need to fetch, unless userId mismatch (security)
-        if (currentResumeIdInStore === resumeIdFromParams && userIdInStore === clerkUserIdFromAuth) {
+        if (currentResumeIdInStore === resumeIdFromParams && userIdInStore === userId) {
           setIsLoadingPage(false);
           return;
         }
@@ -120,7 +130,7 @@ function CreateResumePageContent() {
             return res.json();
           })
           .then((data: ResumeData & { id: string }) => {
-            if (data.userId !== clerkUserIdFromAuth) { // Security check
+            if (data.userId !== userId) { // Security check
               throw new Error('Access denied: This resume does not belong to you.');
             }
             stableLoadResume(data);
@@ -128,23 +138,23 @@ function CreateResumePageContent() {
           .catch(err => {
             console.error("Error fetching resume for edit:", err);
             alert((err as Error).message || "Failed to load resume. Starting a new one.");
-            stableResetResume(clerkUserIdFromAuth); // Reset with current user ID
+            stableResetResume(userId); // Reset with current user ID
             router.replace('/dashboard/create-resume', { scroll: false }); // Go to clean create page
           })
           .finally(() => setIsLoadingPage(false));
       } else { // No resumeId in params, creating new or continuing unsaved
-        if (!currentResumeIdInStore || userIdInStore !== clerkUserIdFromAuth) { // If store is empty, has different user's data, or new session
-          stableResetResume(clerkUserIdFromAuth); // Reset with current user ID
+        if (!currentResumeIdInStore || userIdInStore !== userId) { // If store is empty, has different user's data, or new session
+          stableResetResume(userId); // Reset with current user ID
         } else {
           // Store has data, possibly for current user, but ensure userId is correct if auth session changed
-           if (userIdInStore !== clerkUserIdFromAuth) {
-             useResumeStore.setState({ userId: clerkUserIdFromAuth });
+           if (userIdInStore !== userId) {
+             useResumeStore.setState({ userId: userId });
            }
         }
         setIsLoadingPage(false);
       }
     }
-  }, [isAuthLoaded, clerkUserIdFromAuth, resumeIdFromParams, router, stableLoadResume, stableResetResume, currentResumeIdInStore, userIdInStore]);
+  }, [status, session?.user, resumeIdFromParams, router, stableLoadResume, stableResetResume, currentResumeIdInStore, userIdInStore]);
 
 
   useEffect(() => { // Auto-set title for new resumes
@@ -154,7 +164,7 @@ function CreateResumePageContent() {
   }, [personalInfo?.firstName, title, setResumeTitle, resumeIdFromParams, currentResumeIdInStore]);
 
   const handleSaveResume = async () => { /* ... (save logic - unchanged, but ensure it uses allResumeDataForPayload()) ... */ 
-    if (!clerkUserIdFromAuth) {
+    if (!session?.user || !("id" in session.user)) {
       alert("User not authenticated."); return;
     }
     setIsSaving(true);
@@ -302,7 +312,7 @@ function CreateResumePageContent() {
     document.body.removeChild(element);
   };
 
-  if (!isAuthLoaded || isLoadingPage) {
+  if (status === 'loading' || isLoadingPage) {
     return (
       <div className={cn("min-h-screen flex items-center justify-center", appTheme.pageBg)}>
         <Loader2 className={cn("w-10 h-10 sm:w-12 sm:h-12 animate-spin", appTheme.textHeading)} />
@@ -358,14 +368,33 @@ function CreateResumePageContent() {
               <Button variant="outline" size="sm" onClick={() => setShowCoverLetterModal(true)} disabled={isSaving || isGeneratingPdf || !currentResumeIdInStore} className="hidden lg:inline-flex">
                 <Mail className="w-4 h-4 mr-2" /> Cover Letter
               </Button>
-              <UserButton 
-                appearance={{
-                    elements: {
-                        avatarBox: "w-8 h-8 sm:w-9 sm:h-9 shadow-md", 
-                        userButtonPopoverCard: `bg-card border-border shadow-xl rounded-xl`
-                    }
-                }}
-              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || ''} />
+                      <AvatarFallback>
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{session?.user?.name}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {session?.user?.email}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
            {/* Progress Bar for Mobile - visible only on md and below */}

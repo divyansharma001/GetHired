@@ -1,19 +1,18 @@
 // app/api/resumes/route.ts
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getServerSession } from "next-auth/next"
 import { prisma } from '@/lib/db';
 import { ResumeData } from '@/types/resume'; // Assuming your full ResumeData type
 
 // POST handler (Create new resume)
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getServerSession()
+    
+    if (!session?.user || !("id" in session.user)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // For body type, ensure it matches what the frontend sends for creation
-    // Omitting fields that are auto-generated or derived on the backend.
     const body = await request.json() as Omit<ResumeData, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'atsScore'> & { title: string, atsScore?:number };
     
     const {
@@ -30,64 +29,70 @@ export async function POST(request: Request) {
         return new NextResponse('Missing required fields (title or personalInfo)', { status: 400 });
     }
 
-    const newResume = await prisma.resume.create({
+    const resume = await prisma.resume.create({
       data: {
-        userId,
-        title,
+        title: title || 'Untitled Resume',
+        userId: (session.user as { id: string }).id,
         atsScore,
-        personalInfo: { create: personalInfo },
-        education: { create: education.map(edu => ({...edu, id: undefined})) },
-        experience: { create: experience.map(exp => ({...exp, id: undefined})) },
-        skills: { create: skills.map(skill => ({...skill, id: undefined})) },
-        projects: { create: projects.map(proj => ({...proj, id: undefined})) },
+        personalInfo: personalInfo ? {
+          create: personalInfo,
+        } : undefined,
+        education: education && education.length > 0 ? {
+          create: education,
+        } : undefined,
+        experience: experience && experience.length > 0 ? {
+          create: experience,
+        } : undefined,
+        skills: skills && skills.length > 0 ? {
+          create: skills,
+        } : undefined,
+        projects: projects && projects.length > 0 ? {
+          create: projects,
+        } : undefined,
       },
-      include: { 
-        personalInfo: true, education: true, experience: true,
-        skills: true, projects: true,
+      include: {
+        personalInfo: true,
+        education: true,
+        experience: true,
+        skills: true,
+        projects: true,
       },
     });
 
-    return NextResponse.json(newResume, { status: 201 });
+    return NextResponse.json(resume, { status: 201 });
   } catch (error) {
-    console.error('[RESUMES_POST_API]', error);
+    console.error('[API_POST_RESUME_ERROR]', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }
 
 // GET handler (Get all resumes for the user)
-export async function GET() { // request parameter is optional if not used
+export async function GET() {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getServerSession()
+    
+    if (!session?.user || !("id" in session.user)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const resumes = await prisma.resume.findMany({
       where: {
-        userId: userId,
+        userId: (session.user as { id: string }).id,
       },
-      orderBy: {
-        updatedAt: 'desc',
-      },
-      select: { // Select only necessary fields for the dashboard list
+      select: {
         id: true,
         title: true,
         atsScore: true,
         updatedAt: true,
-        // Add 'status' if it's in your Prisma model
-      }
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const resumesWithStatus = resumes.map((r: any) => ({
-        ...r,
-        status: r.atsScore > 70 ? 'completed' : 'draft' as 'completed' | 'draft' 
-    }));
-
-    return NextResponse.json(resumesWithStatus);
-
+    return NextResponse.json(resumes);
   } catch (error) {
-    console.error('[RESUMES_GET_ALL_API]', error); // Changed log identifier
+    console.error('[API_GET_RESUMES_ERROR]', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

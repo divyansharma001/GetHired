@@ -1,13 +1,14 @@
 // app/api/ai/generate-cover-letter/route.ts
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getServerSession } from "next-auth/next"
 import { generateCoverLetter } from '@/lib/ai/cover-letter-generator';
 import { ResumeData } from '@/types/resume';
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getServerSession()
+    
+    if (!session?.user || !("id" in session.user)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -26,7 +27,6 @@ export async function POST(request: Request) {
      if (!resumeData.personalInfo || !resumeData.personalInfo.firstName) {
        return new NextResponse('Resume data must include at least personal information with a first name.', { status: 400 });
      }
-
 
     const coverLetterOutput = await generateCoverLetter({
         resumeData,

@@ -1,29 +1,27 @@
 // app/api/ai/enhance-experience/route.ts
 import { NextResponse } from 'next/server';
-import { auth } from '@clerk/nextjs/server';
+import { getServerSession } from "next-auth/next"
 import { enhanceExperienceEntry } from '@/lib/ai/experience-enhancer';
 
 export async function POST(request: Request) {
   try {
-    const { userId } = await auth();
-    if (!userId) {
+    const session = await getServerSession()
+    
+    if (!session?.user || !("id" in session.user)) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const body = await request.json();
-    const { description, achievements, title, jobTitle, targetCompanyValues } = body; // <<< Destructure targetCompanyValues
+    const { currentDescription, jobTitle, targetCompanyValues } = body;
 
-    if (!description) {
-      return new NextResponse('Experience description is required', { status: 400 });
+    if (!currentDescription) {
+      return new NextResponse('Current description is required', { status: 400 });
     }
 
-    // Pass targetCompanyValues to the enhancer function
-    const enhancedData = await enhanceExperienceEntry({
-        description,
-        achievements,
-        title,
-        jobTitle,
-        targetCompanyValues // <<< Pass here
+    const enhancedData = await enhanceExperienceEntry({ 
+      description: currentDescription,
+      jobTitle: jobTitle,
+      targetCompanyValues: targetCompanyValues
     });
     return NextResponse.json(enhancedData);
 

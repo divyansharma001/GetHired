@@ -1,15 +1,17 @@
-
 // app/dashboard/page.tsx
-import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
+import { getServerSession } from "next-auth"
+import { redirect } from "next/navigation"
 import DashboardContent from "@/components/dashboard/dashboard-content"
 
 export default async function Dashboard() {
-  const { userId } = await auth();
-
-  if (!userId) {
-    redirect('/sign-in');
+  const session = await getServerSession()
+  
+  if (!session?.user) {
+    redirect('/sign-in')
   }
 
-  return <DashboardContent userId={userId} />;
+  // TypeScript type assertion since we know the user exists
+  const user = session.user as { id: string }
+  
+  return <DashboardContent userId={user.id} />
 }
